@@ -14,49 +14,72 @@
    ============================================================================= */
 
 @layer base {
+  /* =========================================================
+     CRISPY BROWN — LawBrain Legal Theme
+     Warm parchment + rich sienna + golden amber
+     ========================================================= */
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-    --primary: 221.2 83.2% 53.3%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 221.2 83.2% 53.3%;
-    --radius: 0.5rem;
+    /* Parchment cream background */
+    --background: 35 60% 97%;
+    --foreground: 20 60% 12%;
+
+    /* Card surfaces — slightly warmer white */
+    --card: 35 80% 99%;
+    --card-foreground: 20 60% 12%;
+
+    /* Popovers */
+    --popover: 35 80% 99%;
+    --popover-foreground: 20 60% 12%;
+
+    /* Primary — rich sienna brown #8B4513 area */
+    --primary: 20 74% 31%;
+    --primary-foreground: 35 60% 97%;
+
+    /* Secondary — warm light tan */
+    --secondary: 33 45% 90%;
+    --secondary-foreground: 20 50% 22%;
+
+    /* Muted — very light warm neutral */
+    --muted: 35 25% 93%;
+    --muted-foreground: 20 18% 48%;
+
+    /* Accent — golden amber */
+    --accent: 38 78% 52%;
+    --accent-foreground: 20 60% 12%;
+
+    /* Destructive */
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 35 60% 97%;
+
+    /* Borders & inputs — warm tan */
+    --border: 30 30% 84%;
+    --input: 30 30% 84%;
+    --ring: 20 74% 31%;
+
+    --radius: 0.6rem;
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 217.2 91.2% 59.8%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 224.3 76.3% 48%;
+    /* Dark mode — deep espresso tones */
+    --background: 20 35% 8%;
+    --foreground: 35 50% 92%;
+    --card: 20 30% 11%;
+    --card-foreground: 35 50% 92%;
+    --popover: 20 30% 11%;
+    --popover-foreground: 35 50% 92%;
+    --primary: 25 65% 52%;
+    --primary-foreground: 20 35% 8%;
+    --secondary: 20 20% 18%;
+    --secondary-foreground: 35 40% 85%;
+    --muted: 20 20% 18%;
+    --muted-foreground: 30 15% 55%;
+    --accent: 38 70% 48%;
+    --accent-foreground: 20 35% 8%;
+    --destructive: 0 62% 40%;
+    --destructive-foreground: 35 50% 92%;
+    --border: 20 20% 20%;
+    --input: 20 20% 20%;
+    --ring: 25 65% 52%;
   }
 }
 
@@ -66,18 +89,20 @@
   }
   body {
     @apply bg-background text-foreground;
-    font-family: Inter, Avenir, Helvetica, Arial, sans-serif;
+    font-family: 'Inter', Avenir, Helvetica, Arial, sans-serif;
     font-synthesis: none;
     text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
+  h1, h2, h3 {
+    font-family: 'Playfair Display', Georgia, 'Times New Roman', serif;
+  }
 }
 
 /* =============================================================================
-   Custom Styles
+   Global Resets
    ============================================================================= */
-
 body {
   margin: 0;
   min-width: 320px;
@@ -85,26 +110,83 @@ body {
 }
 
 #app {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
-}
-
-.logo {
-  height: 5em;
-  padding: 1em;
-  will-change: filter;
-  transition: filter 300ms;
-}
-.logo:hover {
-  filter: drop-shadow(0 0 2em hsl(var(--primary) / 0.5));
+  width: 100%;
+  min-height: 100vh;
 }
 
 a {
-  font-weight: 500;
   color: hsl(var(--primary));
   text-decoration: inherit;
 }
 a:hover {
   text-decoration: underline;
+}
+
+/* =============================================================================
+   Chatbot Widget Animations
+   ============================================================================= */
+@keyframes pulse-ring {
+  0%   { transform: scale(1);   opacity: 0.6; }
+  70%  { transform: scale(1.35); opacity: 0; }
+  100% { transform: scale(1.35); opacity: 0; }
+}
+
+@keyframes bounce-in {
+  0%   { opacity: 0; transform: scale(0.85) translateY(12px); }
+  60%  { transform: scale(1.03) translateY(-3px); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.animate-pulse-ring {
+  animation: pulse-ring 2s cubic-bezier(0.455, 0.03, 0.515, 0.955) infinite;
+}
+
+.animate-bounce-in {
+  animation: bounce-in 0.4s ease-out forwards;
+}
+
+.animate-slide-up {
+  animation: slide-up 0.35s ease-out forwards;
+}
+
+.animate-fade-in {
+  animation: fade-in 0.5s ease-out forwards;
+}
+
+/* =============================================================================
+   Hero gradient
+   ============================================================================= */
+.hero-gradient {
+  background: linear-gradient(
+    135deg,
+    hsl(30 55% 94%) 0%,
+    hsl(35 70% 97%) 40%,
+    hsl(38 65% 95%) 100%
+  );
+}
+
+.brown-gradient {
+  background: linear-gradient(
+    135deg,
+    hsl(20 74% 28%) 0%,
+    hsl(20 65% 36%) 100%
+  );
+}
+
+/* Parchment texture pattern (pure CSS) */
+.parchment-pattern {
+  background-color: hsl(35 60% 97%);
+  background-image:
+    radial-gradient(ellipse at 20% 50%, hsl(30 40% 90% / 0.4) 0%, transparent 60%),
+    radial-gradient(ellipse at 80% 20%, hsl(38 50% 92% / 0.4) 0%, transparent 50%);
 }

@@ -45,6 +45,28 @@ export default {
           foreground: "hsl(var(--card-foreground))",
         },
       },
+      /* Crispy brown palette — direct utility classes */
+      brown: {
+        50:  "#fdf6ee",
+        100: "#f8e8d4",
+        200: "#f0ceaa",
+        300: "#e4ae78",
+        400: "#d68a48",
+        500: "#c4722a",
+        600: "#a85a1f",
+        700: "#8b451a",
+        800: "#6e3618",
+        900: "#4a2310",
+        950: "#2c1208",
+      },
+      parchment: {
+        DEFAULT: "#fdf6ee",
+        dark: "#f5e4c8",
+      },
+      fontFamily: {
+        serif: ["'Playfair Display'", "Georgia", "serif"],
+        sans:  ["'Inter'", "Avenir", "Helvetica", "Arial", "sans-serif"],
+      },
       borderRadius: {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
