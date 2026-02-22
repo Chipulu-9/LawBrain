@@ -1,7 +1,6 @@
 {
-  "extends": "@repo/config/tsconfig.json",
+  "extends": "../../packages/config/tsconfig.json",
   "compilerOptions": {
-    "moduleResolution": "bundler",
     "jsx": "react-jsx",
     "types": ["vitest/globals"]
   },
