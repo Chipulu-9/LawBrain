@@ -26,13 +26,15 @@ const SUGGESTIONS = [
 ]
 
 function renderText(text: string) {
-  return text
-    .split(/\*\*(.*?)\*\*/g)
-    .map((part, i) =>
-      i % 2 === 1
-        ? <strong key={i} className="font-semibold text-brown-900">{part}</strong>
-        : <span key={i}>{part}</span>
+  return text.split(/\*\*(.*?)\*\*/g).map((part, i) =>
+    i % 2 === 1 ? (
+      <strong key={i} className="font-semibold text-brown-900">
+        {part}
+      </strong>
+    ) : (
+      <span key={i}>{part}</span>
     )
+  )
 }
 
 /* ─── Main Widget ──────────────────────────────────────────────────── */
@@ -46,11 +48,27 @@ export function ChatbotWidget() {
   const [showPulse, setShowPulse] = useState(true)
   const bottomRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
+  const handleSendRef = useRef<((text?: string) => void) | null>(null)
 
   /* Stop pulse after first open */
   useEffect(() => {
     if (open) setShowPulse(false)
   }, [open])
+
+  /* Listen for open-with-query from LandingPage hero search */
+  useEffect(() => {
+    function onOpenChat(e: CustomEvent<{ query: string }>) {
+      const q = e.detail?.query?.trim()
+      setOpen(true)
+      setMinimized(false)
+      if (q) {
+        setInput(q)
+        setTimeout(() => handleSendRef.current?.(q), 150)
+      }
+    }
+    window.addEventListener('lawbrain-open-chat', onOpenChat as EventListener)
+    return () => window.removeEventListener('lawbrain-open-chat', onOpenChat as EventListener)
+  }, [])
 
   /* Auto-scroll to latest message */
   useEffect(() => {
@@ -68,7 +86,12 @@ export function ChatbotWidget() {
     const userText = (text ?? input).trim()
     if (!userText || loading) return
 
-    const userMsg: Message = { id: Date.now().toString(), role: 'user', text: userText, time: now() }
+    const userMsg: Message = {
+      id: Date.now().toString(),
+      role: 'user',
+      text: userText,
+      time: now(),
+    }
     setMessages(prev => [...prev, userMsg])
     setInput('')
     setLoading(true)
@@ -85,6 +108,7 @@ export function ChatbotWidget() {
       setLoading(false)
     }, 1500)
   }
+  handleSendRef.current = handleSend
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -106,7 +130,9 @@ export function ChatbotWidget() {
               <Scale className="w-4 h-4 text-brown-100" strokeWidth={1.8} />
             </div>
             <div className="flex-1 min-w-0">
-              <div className="font-serif font-bold text-sm text-brown-50 leading-tight">LawBrain AI</div>
+              <div className="font-serif font-bold text-sm text-brown-50 leading-tight">
+                LawBrain AI
+              </div>
               <div className="flex items-center gap-1.5 mt-0.5">
                 <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
                 <span className="text-[10px] text-brown-400">Zambian Legal Assistant</span>
@@ -115,14 +141,14 @@ export function ChatbotWidget() {
             <div className="flex items-center gap-1">
               <button
                 onClick={() => setMinimized(v => !v)}
-                className="p-1.5 rounded-lg hover:bg-brown-700 transition-colors text-brown-300 hover:text-brown-100"
+                className="p-1.5 rounded-lg hover:bg-brown-700 transition-all duration-200 text-brown-300 hover:text-brown-100 cursor-pointer outline-none focus:outline-none focus-visible:ring-2 focus-visible:ring-brown-400 focus-visible:ring-offset-1 active:scale-95"
                 aria-label="Minimize"
               >
                 <Minimize2 className="w-3.5 h-3.5" />
               </button>
               <button
                 onClick={() => setOpen(false)}
-                className="p-1.5 rounded-lg hover:bg-brown-700 transition-colors text-brown-300 hover:text-brown-100"
+                className="p-1.5 rounded-lg hover:bg-brown-700 transition-all duration-200 text-brown-300 hover:text-brown-100 cursor-pointer outline-none focus:outline-none focus-visible:ring-2 focus-visible:ring-brown-400 focus-visible:ring-offset-1 active:scale-95"
                 aria-label="Close"
               >
                 <X className="w-4 h-4" />
@@ -141,10 +167,14 @@ export function ChatbotWidget() {
                   >
                     {/* Avatar */}
                     {msg.role === 'assistant' && (
-                      <div className="flex-shrink-0 w-7 h-7 rounded-full bg-brown-800 flex items-center justify-center text-brown-100 font-serif text-xs shadow">⚖</div>
+                      <div className="flex-shrink-0 w-7 h-7 rounded-full bg-brown-800 flex items-center justify-center text-brown-100 font-serif text-xs shadow">
+                        ⚖
+                      </div>
                     )}
 
-                    <div className={`flex flex-col gap-1 max-w-[82%] ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
+                    <div
+                      className={`flex flex-col gap-1 max-w-[82%] ${msg.role === 'user' ? 'items-end' : 'items-start'}`}
+                    >
                       <div
                         className={`px-3.5 py-2.5 rounded-2xl text-sm leading-relaxed shadow-sm ${
                           msg.role === 'user'
@@ -166,12 +196,23 @@ export function ChatbotWidget() {
                 {/* Loading indicator */}
                 {loading && (
                   <div className="flex gap-2.5 animate-fade-in">
-                    <div className="flex-shrink-0 w-7 h-7 rounded-full bg-brown-800 flex items-center justify-center text-brown-100 font-serif text-xs shadow">⚖</div>
+                    <div className="flex-shrink-0 w-7 h-7 rounded-full bg-brown-800 flex items-center justify-center text-brown-100 font-serif text-xs shadow">
+                      ⚖
+                    </div>
                     <div className="px-4 py-3 bg-white border border-brown-200 rounded-2xl rounded-tl-sm shadow-sm">
                       <div className="flex gap-1 items-center">
-                        <span className="w-1.5 h-1.5 rounded-full bg-brown-500 animate-bounce" style={{ animationDelay: '0ms' }} />
-                        <span className="w-1.5 h-1.5 rounded-full bg-brown-500 animate-bounce" style={{ animationDelay: '150ms' }} />
-                        <span className="w-1.5 h-1.5 rounded-full bg-brown-500 animate-bounce" style={{ animationDelay: '300ms' }} />
+                        <span
+                          className="w-1.5 h-1.5 rounded-full bg-brown-500 animate-bounce"
+                          style={{ animationDelay: '0ms' }}
+                        />
+                        <span
+                          className="w-1.5 h-1.5 rounded-full bg-brown-500 animate-bounce"
+                          style={{ animationDelay: '150ms' }}
+                        />
+                        <span
+                          className="w-1.5 h-1.5 rounded-full bg-brown-500 animate-bounce"
+                          style={{ animationDelay: '300ms' }}
+                        />
                       </div>
                     </div>
                   </div>
@@ -187,7 +228,7 @@ export function ChatbotWidget() {
                     <button
                       key={s}
                       onClick={() => handleSend(s)}
-                      className="flex items-center gap-1 text-[11px] font-medium text-brown-700 bg-white border border-brown-200 rounded-full px-3 py-1.5 hover:bg-brown-100 transition-colors shadow-sm"
+                      className="flex items-center gap-1 text-[11px] font-medium text-brown-700 bg-white border border-brown-200 rounded-full px-3 py-1.5 hover:bg-brown-100 transition-all duration-200 shadow-sm cursor-pointer outline-none focus:outline-none focus-visible:ring-2 focus-visible:ring-brown-400 focus-visible:ring-offset-2 active:scale-95"
                     >
                       <ArrowRight className="w-3 h-3 text-amber-600" />
                       {s}
@@ -211,7 +252,7 @@ export function ChatbotWidget() {
                 <button
                   onClick={() => handleSend()}
                   disabled={!input.trim() || loading}
-                  className="flex-shrink-0 p-2.5 bg-brown-700 hover:bg-brown-800 disabled:opacity-40 disabled:cursor-not-allowed text-brown-50 rounded-xl shadow transition-all"
+                  className="flex-shrink-0 p-2.5 bg-brown-700 hover:bg-brown-800 disabled:opacity-40 disabled:cursor-not-allowed text-brown-50 rounded-xl shadow transition-all duration-200 cursor-pointer outline-none focus:outline-none focus-visible:ring-2 focus-visible:ring-brown-400 focus-visible:ring-offset-2 active:scale-95"
                   aria-label="Send message"
                 >
                   <Send className="w-4 h-4" />
@@ -242,17 +283,21 @@ export function ChatbotWidget() {
             setOpen(v => !v)
             setMinimized(false)
           }}
-          className="relative w-14 h-14 rounded-full bg-brown-700 hover:bg-brown-800 text-brown-50 shadow-xl hover:shadow-2xl transition-all duration-200 flex items-center justify-center group hover:scale-105 active:scale-95"
+          className="relative w-14 h-14 rounded-full bg-brown-700 hover:bg-brown-800 text-brown-50 shadow-xl hover:shadow-2xl transition-all duration-200 flex items-center justify-center group hover:scale-105 active:scale-95 cursor-pointer outline-none focus:outline-none focus-visible:ring-2 focus-visible:ring-brown-400 focus-visible:ring-offset-2"
           aria-label={open ? 'Close chat' : 'Open LawBrain chat'}
         >
-          {open
-            ? <X className="w-6 h-6 transition-transform duration-200" />
-            : <MessageCircle className="w-6 h-6 transition-transform duration-200 group-hover:scale-110" />
-          }
+          {open ? (
+            <X className="w-6 h-6 transition-transform duration-200" />
+          ) : (
+            <MessageCircle className="w-6 h-6 transition-transform duration-200 group-hover:scale-110" />
+          )}
 
-          {/* Notification dot */}
+          {/* Pulsing online indicator dot */}
           {!open && (
-            <span className="absolute top-0.5 right-0.5 w-3.5 h-3.5 bg-amber-500 border-2 border-white rounded-full shadow-sm" />
+            <span
+              className="absolute top-0.5 right-0.5 w-3.5 h-3.5 bg-green-400 border-2 border-white rounded-full shadow-sm animate-pulse"
+              aria-hidden
+            />
           )}
         </button>
 

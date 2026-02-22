@@ -190,3 +190,22 @@ a:hover {
     radial-gradient(ellipse at 20% 50%, hsl(30 40% 90% / 0.4) 0%, transparent 60%),
     radial-gradient(ellipse at 80% 20%, hsl(38 50% 92% / 0.4) 0%, transparent 50%);
 }
+
+/* Nav link hover underline — slides in from left */
+.nav-link-underline {
+  position: relative;
+}
+.nav-link-underline::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 0;
+  height: 2px;
+  background: currentColor;
+  transition: width 0.2s ease-out;
+}
+.nav-link-underline:hover::after,
+.nav-link-underline:focus-visible::after {
+  width: 100%;
+}
