@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { MessageCircle, X, Send, Scale, ArrowRight, Minimize2 } from 'lucide-react'
+import { useAuth } from '../hooks/useAuth'
 
 interface Message {
   id: string
@@ -40,6 +41,7 @@ function renderText(text: string) {
 /* ─── Main Widget ──────────────────────────────────────────────────── */
 
 export function ChatbotWidget() {
+  const { user } = useAuth()
   const [open, setOpen] = useState(false)
   const [minimized, setMinimized] = useState(false)
   const [messages, setMessages] = useState<Message[]>([WELCOME])
@@ -109,6 +111,9 @@ export function ChatbotWidget() {
     }, 1500)
   }
   handleSendRef.current = handleSend
+
+  /* Only render for authenticated users */
+  if (!user) return null
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
     if (e.key === 'Enter' && !e.shiftKey) {

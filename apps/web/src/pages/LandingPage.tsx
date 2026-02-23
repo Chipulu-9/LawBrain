@@ -12,6 +12,8 @@ import {
   ChevronRight,
   Loader2,
 } from 'lucide-react'
+import { useAuth } from '../hooks/useAuth'
+import { AuthModal } from '../components/AuthModal'
 
 /* ─── Small reusable pieces ─────────────────────────────────────── */
 
@@ -77,14 +79,25 @@ function StatCard({ value, label }: { value: string; label: string }) {
 /* ─── Main Page ──────────────────────────────────────────────────── */
 
 export function LandingPage() {
+  const { user } = useAuth()
   const [query, setQuery] = useState('')
   const [searching, setSearching] = useState(false)
+  const [authModalOpen, setAuthModalOpen] = useState(false)
+
+  /** Opens the chatbot for authenticated users; prompts sign-up otherwise. */
+  function openChat(q = '') {
+    if (!user) {
+      setAuthModalOpen(true)
+      return
+    }
+    window.dispatchEvent(new CustomEvent('lawbrain-open-chat', { detail: { query: q } }))
+  }
 
   function handleSearch() {
     const q = query.trim()
     if (!q || searching) return
     setSearching(true)
-    window.dispatchEvent(new CustomEvent('lawbrain-open-chat', { detail: { query: q } }))
+    openChat(q)
     setTimeout(() => setSearching(false), 400)
   }
 
@@ -96,11 +109,13 @@ export function LandingPage() {
   ]
 
   return (
+    <>
+    <AuthModal open={authModalOpen} onClose={() => setAuthModalOpen(false)} defaultMode="signup" />
     <div className="w-full">
       {/* ══════════════════════════════════════════
           HERO SECTION
       ══════════════════════════════════════════ */}
-      <section className="relative overflow-hidden parchment-pattern pt-20 pb-24 md:pt-28 md:pb-32">
+      <section className={`relative overflow-hidden parchment-pattern ${user ? 'pt-20 pb-24 md:pt-28 md:pb-32' : 'min-h-[calc(100vh-4rem)] flex items-center'}`}>
         {/* Decorative background elements */}
         <div className="absolute inset-0 pointer-events-none">
           <div className="absolute top-1/4 left-0 w-72 h-72 bg-brown-300 rounded-full opacity-10 blur-3xl -translate-x-1/2" />
@@ -192,6 +207,7 @@ export function LandingPage() {
         </div>
       </section>
 
+      {user && <>
       {/* ══════════════════════════════════════════
           STATS BAR
       ══════════════════════════════════════════ */}
@@ -402,13 +418,7 @@ export function LandingPage() {
               <button
                 key={doc.title}
                 type="button"
-                onClick={() =>
-                  window.dispatchEvent(
-                    new CustomEvent('lawbrain-open-chat', {
-                      detail: { query: `Tell me about ${doc.title}` },
-                    })
-                  )
-                }
+                onClick={() => openChat(`Tell me about ${doc.title}`)}
                 onKeyDown={e => e.key === ' ' && e.preventDefault()}
                 className="group w-full flex items-start gap-4 bg-white border border-brown-200 rounded-xl p-4 shadow-sm text-left hover:shadow-md transition-all duration-200 cursor-pointer active:scale-[0.98] outline-none focus:outline-none focus-visible:ring-2 focus-visible:ring-brown-400 focus-visible:ring-offset-2"
                 aria-label={`Learn more about ${doc.title}`}
@@ -445,15 +455,11 @@ export function LandingPage() {
             journey today
           </h2>
           <p className="text-brown-300 text-base mb-10 max-w-md mx-auto">
-            Ask your first question for free. No account required to get started.
+            Create a free account and start asking questions about Zambian law instantly.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <button
-              onClick={() =>
-                window.dispatchEvent(
-                  new CustomEvent('lawbrain-open-chat', { detail: { query: '' } })
-                )
-              }
+              onClick={() => openChat()}
               className="inline-flex items-center gap-2 px-8 py-4 bg-brown-50 text-brown-900 font-semibold text-sm rounded-xl shadow-lg hover:bg-white transition-all duration-200 hover:shadow-xl cursor-pointer outline-none focus:outline-none focus-visible:ring-2 focus-visible:ring-brown-300 focus-visible:ring-offset-2 active:scale-95"
               aria-label="Ask a question"
             >
@@ -470,6 +476,8 @@ export function LandingPage() {
           </div>
         </div>
       </section>
+      </>}
     </div>
+    </>
   )
 }
