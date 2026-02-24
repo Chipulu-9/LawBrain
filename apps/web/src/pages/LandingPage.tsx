@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   Search,
   BookOpen,
@@ -71,6 +72,7 @@ function StepCard({
 
 export function LandingPage() {
   const { user } = useAuth()
+  const navigate = useNavigate()
   const [query, setQuery] = useState('')
   const [searching, setSearching] = useState(false)
   const [authModalOpen, setAuthModalOpen] = useState(false)
@@ -81,7 +83,7 @@ export function LandingPage() {
       setAuthModalOpen(true)
       return
     }
-    window.dispatchEvent(new CustomEvent('lawbrain-open-chat', { detail: { query: q } }))
+    navigate('/chatbot', { state: { query: q } })
   }
 
   function handleSearch() {
