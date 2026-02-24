@@ -13,6 +13,7 @@ import {
 } from 'firebase/firestore'
 import { db } from '../lib/firebase'
 import { useAuth } from '../hooks/useAuth'
+import { trpc } from '../lib/trpc'
 
 type Role = 'user' | 'assistant'
 
@@ -59,6 +60,7 @@ function renderText(text: string) {
 
 export function ChatbotPage() {
   const { user } = useAuth()
+  const askMutation = trpc.chat.ask.useMutation()
   const navigate = useNavigate()
   const location = useLocation()
 
@@ -296,7 +298,7 @@ export function ChatbotPage() {
 
   async function handleSend(rawText?: string) {
     const userText = (rawText ?? input).trim()
-    if (!userText || isAwaitingAssistant || !currentChatId) return
+    if (!user || !userText || isAwaitingAssistant || !currentChatId) return
 
     const targetChatId = currentChatId
 
@@ -317,8 +319,32 @@ export function ChatbotPage() {
       console.error('Failed to persist user message:', error)
     }
 
-    window.setTimeout(async () => {
-      const assistantText = `That's a great legal question about **"${userText}"**.\n\nFull AI answers are coming soon once the backend is connected. In the meantime, you can browse the legal corpus or ask another question.\n\n*Sources will appear here with document citations.*`
+    try {
+      console.log('Sending message:', {
+        userId: user.uid,
+        chatId: targetChatId,
+        question: userText,
+      })
+      const result = await askMutation.mutateAsync({
+        userId: user.uid,
+        chatId: targetChatId,
+        question: userText,
+      })
+      console.log('Response received:', result)
+
+      const citations = result.sources
+        .slice(0, 4)
+        .map(
+          source =>
+            `- According to ${source.title}${source.pageNumber ? `, page ${source.pageNumber}` : ''} (chunk ${source.chunkIndex})`
+        )
+        .join('\n')
+
+      const assistantText =
+        citations.length > 0
+          ? `${result.answer}\n\n**Sources**\n${citations}`
+          : result.answer
+
       const localAssistantMessage: ChatMessage = {
         messageId: `local-assistant-${Date.now()}`,
         role: 'assistant',
@@ -328,15 +354,36 @@ export function ChatbotPage() {
 
       if (currentChatIdRef.current === targetChatId) {
         setMessages(prev => [...prev, localAssistantMessage])
-        setIsAwaitingAssistant(false)
+      }
+
+      await persistMessage(targetChatId, 'assistant', assistantText)
+    } catch (error) {
+      console.error('Full error:', error)
+      console.error('Failed to generate RAG response:', error)
+
+      const fallbackText =
+        'I could not retrieve the legal corpus response right now. Please try again in a moment.'
+      const fallbackAssistantMessage: ChatMessage = {
+        messageId: `local-assistant-${Date.now()}`,
+        role: 'assistant',
+        content: fallbackText,
+        timestamp: new Date(),
+      }
+
+      if (currentChatIdRef.current === targetChatId) {
+        setMessages(prev => [...prev, fallbackAssistantMessage])
       }
 
       try {
-        await persistMessage(targetChatId, 'assistant', assistantText)
-      } catch (error) {
-        console.error('Failed to persist assistant message:', error)
+        await persistMessage(targetChatId, 'assistant', fallbackText)
+      } catch (persistError) {
+        console.error('Failed to persist fallback assistant message:', persistError)
       }
-    }, 1200)
+    } finally {
+      if (currentChatIdRef.current === targetChatId) {
+        setIsAwaitingAssistant(false)
+      }
+    }
   }
 
   useEffect(() => {

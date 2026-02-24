@@ -1,18 +1,8 @@
 rules_version = '2';
-
 service cloud.firestore {
   match /databases/{database}/documents {
-    // User profiles: only the signed-in user can read/update their own doc
-    match /users/{userId} {
-      allow read: if request.auth != null && request.auth.uid == userId;
-      allow create: if request.auth != null && request.auth.uid == userId;
-      allow update: if request.auth != null && request.auth.uid == userId;
-      allow delete: if false;
-    }
-
-    // Optional: keep a temporary open rule for other collections until you add proper rules
     match /{document=**} {
-      allow read, write: if request.time < timestamp.date(2026, 3, 21);
+      allow read, write: if true;
     }
   }
 }

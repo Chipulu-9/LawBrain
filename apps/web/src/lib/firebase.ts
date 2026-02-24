@@ -3,12 +3,12 @@ import { getAuth } from 'firebase/auth'
 import { getFirestore } from 'firebase/firestore'
 
 const firebaseConfig = {
-  apiKey: 'AIzaSyC-CH4zWzkivvwFYRz96_yzXuAXqutk4r8',
-  authDomain: 'lawbrain-c4581.firebaseapp.com',
-  projectId: 'lawbrain-c4581',
-  storageBucket: 'lawbrain-c4581.firebasestorage.app',
-  messagingSenderId: '18327491020',
-  appId: '1:18327491020:web:6d1508b1259241a5350d69',
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
 }
 
 const app = initializeApp(firebaseConfig)
