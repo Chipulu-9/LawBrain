@@ -209,3 +209,22 @@ a:hover {
 .nav-link-underline:focus-visible::after {
   width: 100%;
 }
+
+/* Navbar slide animation */
+.navbar-slide-container {
+  transform: translateY(0);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  will-change: transform;
+}
+
+.navbar-slide-visible {
+  transform: translateY(0);
+}
+
+.navbar-slide-hidden {
+  transform: translateY(-100%);
+}
+
+.navbar-slide-elevated {
+  box-shadow: 0 6px 16px hsl(20 25% 25% / 0.12);
+}

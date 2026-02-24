@@ -28,6 +28,7 @@ export interface UserProfile {
 interface AuthContextValue {
   user: User | null
   loading: boolean
+  isLoading: boolean
   error: string | null
   setError: (err: string | null) => void
   signUp: (email: string, password: string, displayName: string) => Promise<void>
@@ -63,7 +64,7 @@ async function createUserProfile(
   })
 }
 
-export function AuthProvider({ children }: { children: ReactNode }) {
+export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -120,6 +121,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const value: AuthContextValue = {
     user,
     loading,
+    isLoading: loading,
     error,
     setError,
     signUp,
@@ -132,10 +134,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
 
-export function useAuthContext() {
+export const useAuth = () => {
   const ctx = useContext(AuthContext)
   if (!ctx) {
     throw new Error('useAuth must be used within an AuthProvider')
   }
   return ctx
 }
+
+export const useAuthContext = useAuth

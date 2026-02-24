@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Scale, Menu, X } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
@@ -9,6 +9,10 @@ export function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false)
   const [authModalOpen, setAuthModalOpen] = useState(false)
   const [authModalMode, setAuthModalMode] = useState<'signin' | 'signup'>('signin')
+  const [isHidden, setIsHidden] = useState(false)
+  const [hasScrolled, setHasScrolled] = useState(false)
+  const previousScrollY = useRef(0)
+  const ticking = useRef(false)
   const { user, loading } = useAuth()
 
   const openSignIn = () => {
@@ -20,9 +24,46 @@ export function Navbar() {
     setAuthModalOpen(true)
   }
 
+  useEffect(() => {
+    const threshold = 8
+
+    const updateNavbarState = () => {
+      const currentScrollY = window.scrollY
+      const delta = currentScrollY - previousScrollY.current
+      const movedEnough = Math.abs(delta) > threshold
+
+      setHasScrolled(currentScrollY > 0)
+
+      if (currentScrollY <= threshold) {
+        setIsHidden(false)
+      } else if (movedEnough) {
+        setIsHidden(delta > 0)
+      }
+
+      previousScrollY.current = currentScrollY
+      ticking.current = false
+    }
+
+    const handleScroll = () => {
+      if (!ticking.current) {
+        ticking.current = true
+        window.requestAnimationFrame(updateNavbarState)
+      }
+    }
+
+    previousScrollY.current = window.scrollY
+    window.addEventListener('scroll', handleScroll, { passive: true })
+
+    return () => {
+      window.removeEventListener('scroll', handleScroll)
+    }
+  }, [])
+
   return (
     <>
-      <header className="sticky top-0 z-50 w-full border-b border-brown-200 bg-brown-50/95 backdrop-blur-sm shadow-sm">
+      <header
+        className={`navbar-slide-container ${isHidden ? 'navbar-slide-hidden' : 'navbar-slide-visible'} ${hasScrolled ? 'navbar-slide-elevated' : ''} sticky top-0 z-50 w-full border-b border-brown-200 bg-brown-50/95 backdrop-blur-sm`}
+      >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
