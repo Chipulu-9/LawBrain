@@ -1,11 +1,15 @@
 {
   "extends": "@repo/config/tsconfig.json",
   "compilerOptions": {
-    "module": "ESNext",
-    "moduleResolution": "bundler",
-    "target": "ES2022",
-    "outDir": "./dist",
-    "rootDir": "./src"
+    "module": "CommonJS",
+    "moduleResolution": "node",
+    "target": "ES2020",
+    "outDir": "./lib",
+    "rootDir": "./src",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true
   },
   "include": ["src"]
 }

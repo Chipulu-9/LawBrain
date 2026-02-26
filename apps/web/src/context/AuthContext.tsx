@@ -69,7 +69,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, u => {
+    const unsubscribe = onAuthStateChanged(auth, (u: User | null) => {
       setUser(u ?? null)
       setLoading(false)
     })

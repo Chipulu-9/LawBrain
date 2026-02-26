@@ -1,0 +1,295 @@
+import { GoogleGenerativeAI } from '@google/generative-ai'
+import { SecretManagerServiceClient } from '@google-cloud/secret-manager'
+import { adminDb } from './firebaseAdmin'
+
+const CHUNK_COLLECTION = 'legal_chunks'
+
+console.log('=== ENV CHECK ===')
+console.log('GEMINI_API_KEY:', process.env.GEMINI_API_KEY ? 'SET' : 'MISSING')
+console.log('GOOGLE_API_KEY:', process.env.GOOGLE_API_KEY ? 'SET' : 'MISSING')
+console.log('OPENAI_API_KEY:', process.env.OPENAI_API_KEY ? 'SET' : 'MISSING')
+console.log('ANTHROPIC_API_KEY:', process.env.ANTHROPIC_API_KEY ? 'SET' : 'MISSING')
+console.log('PINECONE_API_KEY:', process.env.PINECONE_API_KEY ? 'SET' : 'MISSING')
+
+interface StoredChunk {
+  content: string
+  source: string
+  title: string
+  chunkIndex: number
+  pageNumber?: number | null
+  embedding: number[]
+}
+
+export interface SourceCitation {
+  source: string
+  title: string
+  pageNumber: number | null
+  chunkIndex: number
+  snippet: string
+}
+
+export interface RagDiagnostics {
+  envVars: {
+    GEMINI_API_KEY: boolean
+    GOOGLE_API_KEY: boolean
+    OPENAI_API_KEY: boolean
+    ANTHROPIC_API_KEY: boolean
+    PINECONE_API_KEY: boolean
+  }
+  documents: {
+    count: number
+    sample: { source: string; title: string } | null
+    error?: string
+  }
+  vectorDB: {
+    connected: boolean
+    indexCount: number
+    error?: string
+  }
+  llm: {
+    working: boolean
+    error?: string
+  }
+}
+
+function cosineSimilarity(a: number[], b: number[]) {
+  if (a.length !== b.length || a.length === 0) return -1
+  let dot = 0
+  let normA = 0
+  let normB = 0
+
+  for (let i = 0; i < a.length; i += 1) {
+    dot += a[i] * b[i]
+    normA += a[i] * a[i]
+    normB += b[i] * b[i]
+  }
+
+  if (normA === 0 || normB === 0) return -1
+  return dot / (Math.sqrt(normA) * Math.sqrt(normB))
+}
+
+function getGeminiClient() {
+  throw new Error('getGeminiClient was called synchronously; use getGeminiClientAsync instead.')
+}
+
+let cachedApiKey: string | null = null
+
+async function getApiKeyFromSecretManager(): Promise<string | null> {
+  const secretId = process.env.SECRET_MANAGER_SECRET || process.env.GOOGLE_SECRET_NAME
+  if (!secretId) return null
+
+  const client = new SecretManagerServiceClient()
+  const project = process.env.GOOGLE_CLOUD_PROJECT || process.env.FIREBASE_PROJECT_ID
+
+  let name = secretId
+  if (!secretId.startsWith('projects/')) {
+    if (!project) throw new Error('Missing GOOGLE_CLOUD_PROJECT or FIREBASE_PROJECT_ID for Secret Manager')
+    name = `projects/${project}/secrets/${secretId}/versions/latest`
+  }
+
+  const [accessResponse] = await client.accessSecretVersion({ name })
+  const payload = accessResponse.payload?.data?.toString()
+  return payload ?? null
+}
+
+async function getApiKey(): Promise<string> {
+  if (cachedApiKey) return cachedApiKey
+
+  // Prefer secret manager
+  try {
+    const secret = await getApiKeyFromSecretManager()
+    if (secret) {
+      cachedApiKey = secret.trim()
+      return cachedApiKey
+    }
+  } catch (err) {
+    console.warn('Secret Manager fetch failed:', (err as Error).message)
+  }
+
+  const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY
+  if (!apiKey) throw new Error('Missing GEMINI_API_KEY/GOOGLE_API_KEY (or SECRET_MANAGER_SECRET) for RAG generation.')
+  cachedApiKey = apiKey
+  return apiKey
+}
+
+async function getGeminiClientAsync() {
+  const apiKey = await getApiKey()
+  return new GoogleGenerativeAI(apiKey)
+}
+
+async function embedText(text: string) {
+  console.log('=== SEARCHING DOCUMENTS ===')
+  console.log('Query:', text.slice(0, 240))
+  const client = await getGeminiClientAsync()
+  const model = client.getGenerativeModel({ model: 'gemini-embedding-001' })
+  const result = await model.embedContent(text)
+  return result.embedding.values
+}
+
+export async function retrieveRelevantChunks(question: string, topK = 5) {
+  const queryEmbedding = await embedText(question)
+  const snapshot = await adminDb.collection(CHUNK_COLLECTION).get()
+
+  const ranked = snapshot.docs
+    .map(docSnap => {
+      const data = docSnap.data() as Partial<StoredChunk>
+      if (!data.content || !data.source || !data.title || !data.embedding || !Array.isArray(data.embedding)) {
+        return null
+      }
+
+      const score = cosineSimilarity(queryEmbedding, data.embedding)
+      return {
+        score,
+        chunk: {
+          source: data.source,
+          title: data.title,
+          pageNumber: data.pageNumber ?? null,
+          chunkIndex: data.chunkIndex ?? 0,
+          snippet: data.content.slice(0, 420),
+          content: data.content,
+        },
+      }
+    })
+    .filter((item): item is NonNullable<typeof item> => item !== null)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, topK)
+
+  console.log('=== DOCUMENTS FOUND ===')
+  console.log('Number of results:', ranked.length)
+  console.log(
+    'Document snippets:',
+    ranked.map(item => item.chunk.content.slice(0, 100))
+  )
+
+  return ranked
+}
+
+function buildPrompt(question: string, contexts: ReturnType<typeof formatContext>[0][]) {
+  return `You are a Zambian legal assistant. Answer ONLY from the legal context below. If context is insufficient, say so clearly.\n\nContext:\n${contexts.join('\n\n')}\n\nUser Question: ${question}\n\nProvide an accurate answer and cite relevant laws/sections in plain text.`
+}
+
+function formatContext(chunk: {
+  source: string
+  title: string
+  pageNumber: number | null
+  chunkIndex: number
+  content: string
+}) {
+  return `[Source: ${chunk.title} | File: ${chunk.source} | Page: ${chunk.pageNumber ?? 'n/a'} | Chunk: ${chunk.chunkIndex}]\n${chunk.content}`
+}
+
+export async function generateRagAnswer(question: string) {
+  try {
+    const ranked = await retrieveRelevantChunks(question, 5)
+    const contexts = ranked.map(item => item.chunk)
+
+    if (contexts.length === 0) {
+      return {
+        answer: 'I could not find relevant legal context in the indexed documents yet.',
+        sources: [] as SourceCitation[],
+      }
+    }
+
+    const prompt = buildPrompt(question, contexts.map(formatContext))
+    console.log('=== CALLING LLM ===')
+    console.log('Prompt length:', prompt.length)
+    console.log('API Key present:', !!process.env.GEMINI_API_KEY || !!process.env.GOOGLE_API_KEY)
+
+    const client = await getGeminiClientAsync()
+    const model = client.getGenerativeModel({ model: 'gemini-2.0-flash-lite' })
+    const generation = await model.generateContent(prompt)
+    const answer = generation.response.text()
+
+    console.log('=== LLM RESPONSE ===')
+    console.log('Response length:', answer.length)
+
+    const sources: SourceCitation[] = contexts.map(chunk => ({
+      source: chunk.source,
+      title: chunk.title,
+      pageNumber: chunk.pageNumber,
+      chunkIndex: chunk.chunkIndex,
+      snippet: chunk.snippet,
+    }))
+
+    return {
+      answer,
+      sources,
+    }
+  } catch (error) {
+    const err = error as Error
+    const message = err.message || ''
+
+    console.error('=== ERROR ===')
+    console.error('Error type:', err.name || 'UnknownError')
+    console.error('Error message:', message)
+    console.error('Stack:', err.stack)
+
+    if (message.toLowerCase().includes('api key')) {
+      console.error('Missing or invalid API key')
+    } else if (message.toLowerCase().includes('rate limit')) {
+      console.error('Rate limited by API')
+    } else if (message.includes('ECONNREFUSED')) {
+      console.error('Cannot connect to external service')
+    }
+
+    throw error
+  }
+}
+
+export async function runRagDiagnostics(): Promise<RagDiagnostics> {
+  const envVars = {
+    GEMINI_API_KEY: !!process.env.GEMINI_API_KEY,
+    GOOGLE_API_KEY: !!process.env.GOOGLE_API_KEY,
+    OPENAI_API_KEY: !!process.env.OPENAI_API_KEY,
+    ANTHROPIC_API_KEY: !!process.env.ANTHROPIC_API_KEY,
+    PINECONE_API_KEY: !!process.env.PINECONE_API_KEY,
+  }
+
+  const result: RagDiagnostics = {
+    envVars,
+    documents: {
+      count: 0,
+      sample: null,
+    },
+    vectorDB: {
+      connected: false,
+      indexCount: 0,
+    },
+    llm: {
+      working: false,
+    },
+  }
+
+  try {
+    const countAggregate = await adminDb.collection(CHUNK_COLLECTION).count().get()
+    result.documents.count = countAggregate.data().count
+    result.vectorDB.indexCount = countAggregate.data().count
+    result.vectorDB.connected = true
+
+    const sampleSnap = await adminDb.collection(CHUNK_COLLECTION).limit(1).get()
+    const sampleDoc = sampleSnap.docs[0]?.data() as Partial<StoredChunk> | undefined
+    if (sampleDoc?.source && sampleDoc?.title) {
+      result.documents.sample = {
+        source: sampleDoc.source,
+        title: sampleDoc.title,
+      }
+    }
+  } catch (error) {
+    const err = error as Error
+    result.documents.error = err.message
+    result.vectorDB.error = err.message
+  }
+
+  try {
+    const client = await getGeminiClientAsync()
+    const model = client.getGenerativeModel({ model: 'gemini-2.0-flash-lite' })
+    const llmTest = await model.generateContent('Say hello in one short sentence.')
+    const text = llmTest.response.text()
+    result.llm.working = text.trim().length > 0
+  } catch (error) {
+    const err = error as Error
+    result.llm.error = err.message
+  }
+
+  return result
+}

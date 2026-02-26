@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@google/generative-ai": "^0.21.0",
+    "@google-cloud/secret-manager": "^6.1.1",
     "@repo/shared": "workspace:*",
     "dotenv": "^16.4.5",
     "firebase-admin": "^12.7.0",

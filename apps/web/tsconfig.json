@@ -2,6 +2,7 @@
   "extends": "../../packages/config/tsconfig.json",
   "compilerOptions": {
     "jsx": "react-jsx",
+    "moduleResolution": "bundler",
     "types": ["vitest/globals"]
   },
   "include": ["src", "vite.config.ts"]

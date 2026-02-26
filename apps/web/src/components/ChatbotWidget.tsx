@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { MessageCircle, X, Send, Scale, ArrowRight, Minimize2 } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
+import { trpc } from '../lib/trpc'
 
 interface Message {
   id: string
@@ -97,18 +98,50 @@ export function ChatbotWidget() {
     setMessages(prev => [...prev, userMsg])
     setInput('')
     setLoading(true)
+    ;(async () => {
+      try {
+        const chatId = Date.now().toString()
+        const result = await trpc.chat.ask.mutateAsync({
+          userId: user?.uid ?? 'anonymous',
+          chatId,
+          question: userText,
+        })
 
-    /* Simulated AI response — replace with real tRPC call once backend is ready */
-    setTimeout(() => {
-      const aiMsg: Message = {
-        id: (Date.now() + 1).toString(),
-        role: 'assistant',
-        text: `That's a great legal question about **"${userText}"**.\n\nFull AI answers are coming soon once the backend is connected. In the meantime, you can browse the legal corpus or sign up to be notified when LawBrain launches!\n\n*Sources will appear here with document citations.*`,
-        time: now(),
+        const aiMsg: Message = {
+          id: (Date.now() + 1).toString(),
+          role: 'assistant',
+          text: result.answer,
+          time: now(),
+        }
+
+        setMessages(prev => [...prev, aiMsg])
+
+        // Append sources as a separate assistant message (concise list)
+        if (result.sources && result.sources.length > 0) {
+          const sourcesText = result.sources
+            .map(s => `• ${s.title} (${s.source}) - p.${s.pageNumber ?? 'n/a'}`)
+            .join('\n')
+
+          const srcMsg: Message = {
+            id: (Date.now() + 2).toString(),
+            role: 'assistant',
+            text: `Sources:\n${sourcesText}`,
+            time: now(),
+          }
+          setMessages(prev => [...prev, srcMsg])
+        }
+      } catch (err) {
+        const aiMsg: Message = {
+          id: (Date.now() + 1).toString(),
+          role: 'assistant',
+          text: 'Sorry, I could not reach the AI service. Please try again later.',
+          time: now(),
+        }
+        setMessages(prev => [...prev, aiMsg])
+      } finally {
+        setLoading(false)
       }
-      setMessages(prev => [...prev, aiMsg])
-      setLoading(false)
-    }, 1500)
+    })()
   }
   handleSendRef.current = handleSend
 
