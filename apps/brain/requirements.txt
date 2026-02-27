@@ -1,0 +1,16 @@
+# LawBrain — Python Cloud Functions dependencies
+#
+# Deploy with:
+#   gcloud functions deploy ingest_bucket \
+#     --gen2 --runtime python312 --trigger-http \
+#     --entry-point ingest_bucket --source apps/brain \
+#     --set-env-vars GOOGLE_CLOUD_PROJECT=<id>,VERTEX_LOCATION=us-central1,RAG_CORPUS_NAME=<name>
+#
+#   gcloud functions deploy ask_rag \
+#     --gen2 --runtime python312 --trigger-http \
+#     --entry-point ask_rag --source apps/brain \
+#     --set-env-vars GOOGLE_CLOUD_PROJECT=<id>,VERTEX_LOCATION=us-central1,RAG_CORPUS_NAME=<name>
+
+functions-framework==3.*
+google-cloud-aiplatform[preview]>=1.71.0
+google-genai>=1.0.0
