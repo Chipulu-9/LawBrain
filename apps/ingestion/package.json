@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "ingest": "tsx src/index.ts",
+    "ingest": "tsx src/cli.ts",
     "typecheck": "tsc --noEmit",
     "lint": "eslint \"src/**/*.ts\""
   },

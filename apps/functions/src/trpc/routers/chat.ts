@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { TRPCError } from '@trpc/server'
 import { router, publicProcedure } from '../trpc'
 import { generateRagAnswer } from '../../lib/rag'
 
@@ -16,7 +17,7 @@ export const chatRouter = router({
       z.object({
         userId: z.string().min(1),
         chatId: z.string().min(1),
-        question: z.string().min(2),
+        question: z.string().trim().min(2).max(1500),
       })
     )
     .output(
@@ -25,7 +26,7 @@ export const chatRouter = router({
         sources: z.array(SourceSchema),
       })
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
       console.log('=== CHAT REQUEST RECEIVED ===')
       console.log('Chat input:', {
         userId: input.userId,
@@ -35,7 +36,12 @@ export const chatRouter = router({
       })
 
       try {
-        const result = await generateRagAnswer(input.question)
+        const geminiApiKey = ctx.geminiApiKey
+        if (!geminiApiKey) {
+          throw new Error('Missing GEMINI_API_KEY secret.')
+        }
+
+        const result = await generateRagAnswer(input.question, geminiApiKey)
 
         console.log('=== CHAT RESPONSE READY ===')
         console.log('Response summary:', {
@@ -64,7 +70,11 @@ export const chatRouter = router({
           console.error('Cannot connect to external service')
         }
 
-        throw error
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'RAG backend failed to answer the question.',
+          cause: error,
+        })
       }
     }),
 })

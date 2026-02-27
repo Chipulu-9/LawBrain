@@ -1,6 +1,10 @@
 import { initTRPC } from '@trpc/server'
 
-const t = initTRPC.create()
+export interface TrpcContext {
+  geminiApiKey?: string
+}
+
+const t = initTRPC.context<TrpcContext>().create()
 
 export const router = t.router
 export const publicProcedure = t.procedure

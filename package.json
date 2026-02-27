@@ -19,7 +19,8 @@
     "changeset": "changeset",
     "version": "changeset version",
     "release": "changeset publish",
-    "precheck": "pnpm lint && pnpm typecheck && pnpm build && pnpm test"
+    "precheck": "pnpm lint && pnpm typecheck && pnpm build && pnpm test",
+    "emulators:functions": "firebase emulators:start --only functions --project lawbrain-c4581"
   },
   "devDependencies": {
     "@changesets/cli": "^2.27.1",

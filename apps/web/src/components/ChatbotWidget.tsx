@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { MessageCircle, X, Send, Scale, ArrowRight, Minimize2 } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
+import { trpc } from '../lib/trpc'
 
 interface Message {
   id: string
@@ -42,15 +43,18 @@ function renderText(text: string) {
 
 export function ChatbotWidget() {
   const { user } = useAuth()
+  const askMutation = trpc.chat.ask.useMutation()
   const [open, setOpen] = useState(false)
   const [minimized, setMinimized] = useState(false)
   const [messages, setMessages] = useState<Message[]>([WELCOME])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const [showPulse, setShowPulse] = useState(true)
   const bottomRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
-  const handleSendRef = useRef<((text?: string) => void) | null>(null)
+  const handleSendRef = useRef<((text?: string) => Promise<void>) | null>(null)
+  const chatSessionIdRef = useRef<string>(`widget-${Date.now()}`)
 
   /* Stop pulse after first open */
   useEffect(() => {
@@ -84,9 +88,9 @@ export function ChatbotWidget() {
     }
   }, [open, minimized])
 
-  function handleSend(text?: string) {
+  async function handleSend(text?: string) {
     const userText = (text ?? input).trim()
-    if (!userText || loading) return
+    if (!userText || loading || !user) return
 
     const userMsg: Message = {
       id: Date.now().toString(),
@@ -97,18 +101,43 @@ export function ChatbotWidget() {
     setMessages(prev => [...prev, userMsg])
     setInput('')
     setLoading(true)
+    setError(null)
 
-    /* Simulated AI response — replace with real tRPC call once backend is ready */
-    setTimeout(() => {
+    try {
+      const result = await askMutation.mutateAsync({
+        userId: user.uid,
+        chatId: chatSessionIdRef.current,
+        question: userText,
+      })
+
+      const citations = result.sources
+        .slice(0, 4)
+        .map(
+          source =>
+            `- ${source.title}${source.pageNumber ? `, page ${source.pageNumber}` : ''} (chunk ${source.chunkIndex})`
+        )
+        .join('\n')
+
       const aiMsg: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        text: `That's a great legal question about **"${userText}"**.\n\nFull AI answers are coming soon once the backend is connected. In the meantime, you can browse the legal corpus or sign up to be notified when LawBrain launches!\n\n*Sources will appear here with document citations.*`,
+        text: citations.length > 0 ? `${result.answer}\n\n**Sources**\n${citations}` : result.answer,
         time: now(),
       }
       setMessages(prev => [...prev, aiMsg])
+    } catch (mutationError) {
+      console.error('Widget chat.ask failed:', mutationError)
+      setError('I could not reach the legal assistant backend right now. Please try again.')
+      const aiMsg: Message = {
+        id: (Date.now() + 1).toString(),
+        role: 'assistant',
+        text: 'I could not retrieve a response from the backend right now. Please try again in a moment.',
+        time: now(),
+      }
+      setMessages(prev => [...prev, aiMsg])
+    } finally {
       setLoading(false)
-    }, 1500)
+    }
   }
   handleSendRef.current = handleSend
 
@@ -118,7 +147,7 @@ export function ChatbotWidget() {
   function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
-      handleSend()
+      void handleSend()
     }
   }
 
@@ -232,7 +261,9 @@ export function ChatbotWidget() {
                   {SUGGESTIONS.map(s => (
                     <button
                       key={s}
-                      onClick={() => handleSend(s)}
+                      onClick={() => {
+                        void handleSend(s)
+                      }}
                       className="flex items-center gap-1 text-[11px] font-medium text-brown-700 bg-white border border-brown-200 rounded-full px-3 py-1.5 hover:bg-brown-100 transition-all duration-200 shadow-sm cursor-pointer outline-none focus:outline-none focus-visible:ring-2 focus-visible:ring-brown-400 focus-visible:ring-offset-2 active:scale-95"
                     >
                       <ArrowRight className="w-3 h-3 text-amber-600" />
@@ -243,7 +274,13 @@ export function ChatbotWidget() {
               )}
 
               {/* Input */}
-              <div className="flex items-end gap-2 px-3 py-3 border-t border-brown-200 bg-white flex-shrink-0">
+              <div className="flex flex-col gap-2 px-3 py-3 border-t border-brown-200 bg-white flex-shrink-0">
+                {error ? (
+                  <p className="text-xs text-red-700 bg-red-50 border border-red-200 rounded-lg px-2 py-1">
+                    {error}
+                  </p>
+                ) : null}
+                <div className="flex items-end gap-2">
                 <textarea
                   ref={inputRef}
                   value={input}
@@ -255,13 +292,16 @@ export function ChatbotWidget() {
                   style={{ scrollbarWidth: 'none' }}
                 />
                 <button
-                  onClick={() => handleSend()}
+                  onClick={() => {
+                    void handleSend()
+                  }}
                   disabled={!input.trim() || loading}
                   className="flex-shrink-0 p-2.5 bg-brown-700 hover:bg-brown-800 disabled:opacity-40 disabled:cursor-not-allowed text-brown-50 rounded-xl shadow transition-all duration-200 cursor-pointer outline-none focus:outline-none focus-visible:ring-2 focus-visible:ring-brown-400 focus-visible:ring-offset-2 active:scale-95"
                   aria-label="Send message"
                 >
                   <Send className="w-4 h-4" />
                 </button>
+                </div>
               </div>
             </>
           )}

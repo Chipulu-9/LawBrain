@@ -11,6 +11,17 @@ const firebaseConfig = {
   appId: import.meta.env.VITE_FIREBASE_APP_ID,
 }
 
+if (import.meta.env.DEV) {
+  console.log('[Firebase env check]', {
+    hasApiKey: Boolean(import.meta.env.VITE_FIREBASE_API_KEY),
+    hasAuthDomain: Boolean(import.meta.env.VITE_FIREBASE_AUTH_DOMAIN),
+    hasProjectId: Boolean(import.meta.env.VITE_FIREBASE_PROJECT_ID),
+    hasStorageBucket: Boolean(import.meta.env.VITE_FIREBASE_STORAGE_BUCKET),
+    hasMessagingSenderId: Boolean(import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID),
+    hasAppId: Boolean(import.meta.env.VITE_FIREBASE_APP_ID),
+  })
+}
+
 const app = initializeApp(firebaseConfig)
 export const auth = getAuth(app)
 export const db = getFirestore(app)
