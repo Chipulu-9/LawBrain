@@ -1,6 +1,6 @@
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { SecretManagerServiceClient } from '@google-cloud/secret-manager'
-import { adminDb } from './firebaseAdmin'
+import { adminDb } from './firebaseAdmin.js'
 
 const CHUNK_COLLECTION = 'legal_chunks'
 
@@ -68,10 +68,6 @@ function cosineSimilarity(a: number[], b: number[]) {
   return dot / (Math.sqrt(normA) * Math.sqrt(normB))
 }
 
-function getGeminiClient() {
-  throw new Error('getGeminiClient was called synchronously; use getGeminiClientAsync instead.')
-}
-
 let cachedApiKey: string | null = null
 
 async function getApiKeyFromSecretManager(): Promise<string | null> {
@@ -83,7 +79,8 @@ async function getApiKeyFromSecretManager(): Promise<string | null> {
 
   let name = secretId
   if (!secretId.startsWith('projects/')) {
-    if (!project) throw new Error('Missing GOOGLE_CLOUD_PROJECT or FIREBASE_PROJECT_ID for Secret Manager')
+    if (!project)
+      throw new Error('Missing GOOGLE_CLOUD_PROJECT or FIREBASE_PROJECT_ID for Secret Manager')
     name = `projects/${project}/secrets/${secretId}/versions/latest`
   }
 
@@ -107,7 +104,10 @@ async function getApiKey(): Promise<string> {
   }
 
   const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY
-  if (!apiKey) throw new Error('Missing GEMINI_API_KEY/GOOGLE_API_KEY (or SECRET_MANAGER_SECRET) for RAG generation.')
+  if (!apiKey)
+    throw new Error(
+      'Missing GEMINI_API_KEY/GOOGLE_API_KEY (or SECRET_MANAGER_SECRET) for RAG generation.'
+    )
   cachedApiKey = apiKey
   return apiKey
 }
@@ -133,7 +133,13 @@ export async function retrieveRelevantChunks(question: string, topK = 5) {
   const ranked = snapshot.docs
     .map(docSnap => {
       const data = docSnap.data() as Partial<StoredChunk>
-      if (!data.content || !data.source || !data.title || !data.embedding || !Array.isArray(data.embedding)) {
+      if (
+        !data.content ||
+        !data.source ||
+        !data.title ||
+        !data.embedding ||
+        !Array.isArray(data.embedding)
+      ) {
         return null
       }
 

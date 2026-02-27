@@ -10,12 +10,6 @@
  */
 
 import 'dotenv/config'
-<<<<<<< Updated upstream
-
-async function main() {
-  console.log('LawBrain ingestion script — stub')
-  console.log('Implement: PDF → chunk → embed → Firestore')
-=======
 import path from 'node:path'
 import { readFile } from 'node:fs/promises'
 import { glob } from 'glob'
@@ -51,7 +45,7 @@ function initAdmin() {
   return initializeApp()
 }
 
-let genai: any = null
+let genai: GoogleGenerativeAI | null = null
 
 async function getApiKeyFromSecretManager(): Promise<string | null> {
   const secretId = process.env.SECRET_MANAGER_SECRET || process.env.GOOGLE_SECRET_NAME
@@ -62,7 +56,8 @@ async function getApiKeyFromSecretManager(): Promise<string | null> {
 
   let name = secretId
   if (!secretId.startsWith('projects/')) {
-    if (!project) throw new Error('Missing GOOGLE_CLOUD_PROJECT or FIREBASE_PROJECT_ID for Secret Manager')
+    if (!project)
+      throw new Error('Missing GOOGLE_CLOUD_PROJECT or FIREBASE_PROJECT_ID for Secret Manager')
     name = `projects/${project}/secrets/${secretId}/versions/latest`
   }
 
@@ -130,6 +125,7 @@ async function extractText(filePath: string): Promise<string> {
 }
 
 async function embed(text: string): Promise<number[]> {
+  if (!genai) throw new Error('genai client not initialized')
   const model = genai.getGenerativeModel({ model: 'gemini-embedding-001' })
   const result = await model.embedContent(text)
   return result.embedding.values
@@ -213,10 +209,9 @@ async function main() {
   }
 
   console.log(`Ingestion complete. Indexed ${totalChunks} chunks from ${files.length} files.`)
->>>>>>> Stashed changes
 }
 
-main().catch((err) => {
+main().catch(err => {
   console.error(err)
   process.exit(1)
 })

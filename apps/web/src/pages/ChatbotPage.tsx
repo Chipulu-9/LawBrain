@@ -127,20 +127,22 @@ export function ChatbotPage() {
         const snapshot = await getDocs(chatQuery)
         if (!isMounted) return
 
-        const sessions = snapshot.docs.map((chatDoc: any) => {
-          const data = chatDoc.data() as {
-            title?: string
-            createdAt?: Timestamp
-            updatedAt?: Timestamp
-          }
+        const sessions = snapshot.docs.map(
+          (chatDoc: { id: string; data: () => Record<string, unknown> }) => {
+            const data = chatDoc.data() as {
+              title?: string
+              createdAt?: Timestamp
+              updatedAt?: Timestamp
+            }
 
-          return {
-            chatId: chatDoc.id,
-            title: data.title?.trim() || 'New Chat',
-            createdAt: data.createdAt ? data.createdAt.toDate() : null,
-            updatedAt: data.updatedAt ? data.updatedAt.toDate() : null,
-          } satisfies ChatSession
-        })
+            return {
+              chatId: chatDoc.id,
+              title: data.title?.trim() || 'New Chat',
+              createdAt: data.createdAt ? data.createdAt.toDate() : null,
+              updatedAt: data.updatedAt ? data.updatedAt.toDate() : null,
+            } satisfies ChatSession
+          }
+        )
 
         if (sessions.length === 0) {
           await createChatSession()
@@ -180,7 +182,7 @@ export function ChatbotPage() {
         if (!isMounted) return
 
         const history = snapshot.docs
-          .map((messageDoc: any) => {
+          .map((messageDoc: { id: string; data: () => Record<string, unknown> }) => {
             const data = messageDoc.data() as {
               messageId?: string
               role?: Role
@@ -335,15 +337,13 @@ export function ChatbotPage() {
       const citations = result.sources
         .slice(0, 4)
         .map(
-          (source: any) =>
+          source =>
             `- According to ${source.title}${source.pageNumber ? `, page ${source.pageNumber}` : ''} (chunk ${source.chunkIndex})`
         )
         .join('\n')
 
       const assistantText =
-        citations.length > 0
-          ? `${result.answer}\n\n**Sources**\n${citations}`
-          : result.answer
+        citations.length > 0 ? `${result.answer}\n\n**Sources**\n${citations}` : result.answer
 
       const localAssistantMessage: ChatMessage = {
         messageId: `local-assistant-${Date.now()}`,

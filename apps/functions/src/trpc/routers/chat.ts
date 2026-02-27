@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { router, publicProcedure } from '../trpc'
+import { router, publicProcedure } from '../trpc.js'
 
 const ASK_RAG_URL = process.env.ASK_RAG_URL || 'http://localhost:8082'
 

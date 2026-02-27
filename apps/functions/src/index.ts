@@ -2,7 +2,7 @@
 // This file serves as the entry point for Firebase Cloud Functions
 // In production, this would be deployed to Firebase
 
-export { appRouter, type AppRouter } from './trpc/router'
+export { appRouter, type AppRouter } from './trpc/router.js'
 
 // Stub: When deploying to Firebase, you would use:
 // import * as functions from 'firebase-functions'

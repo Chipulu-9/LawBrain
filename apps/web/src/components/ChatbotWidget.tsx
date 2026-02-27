@@ -43,6 +43,7 @@ function renderText(text: string) {
 
 export function ChatbotWidget() {
   const { user } = useAuth()
+  const askMutation = trpc.chat.ask.useMutation()
   const [open, setOpen] = useState(false)
   const [minimized, setMinimized] = useState(false)
   const [messages, setMessages] = useState<Message[]>([WELCOME])
@@ -101,7 +102,7 @@ export function ChatbotWidget() {
     ;(async () => {
       try {
         const chatId = Date.now().toString()
-        const result = await trpc.chat.ask.mutateAsync({
+        const result = await askMutation.mutateAsync({
           userId: user?.uid ?? 'anonymous',
           chatId,
           question: userText,

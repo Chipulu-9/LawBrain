@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { appRouter } from '../router'
-import { createCallerFactory } from '../trpc'
+import { appRouter } from '../router.js'
+import { createCallerFactory } from '../trpc.js'
 
 const createCaller = createCallerFactory(appRouter)
 const caller = createCaller({})
