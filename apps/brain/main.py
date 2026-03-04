@@ -144,6 +144,13 @@ def ingest_bucket(request):
 # ---------------------------------------------------------------------------
 
 
+_CORS_HEADERS = {
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type",
+}
+
+
 @functions_framework.http
 def ask_rag(request):
     """
@@ -157,6 +164,9 @@ def ask_rag(request):
       400  { "error": "Missing required field: query" }
       500  { "error": "..." }
     """
+    if request.method == "OPTIONS":
+        return ("", 204, _CORS_HEADERS)
+
     try:
         body = request.get_json(silent=True) or {}
         query: str = body.get("query", "").strip()
@@ -165,7 +175,7 @@ def ask_rag(request):
             return (
                 json.dumps({"error": "Missing required field: query"}),
                 400,
-                {"Content-Type": "application/json"},
+                {"Content-Type": "application/json", **_CORS_HEADERS},
             )
 
         client = _genai_client()
@@ -196,12 +206,12 @@ def ask_rag(request):
         return (
             json.dumps(payload),
             200,
-            {"Content-Type": "application/json"},
+            {"Content-Type": "application/json", **_CORS_HEADERS},
         )
 
     except Exception as exc:  # noqa: BLE001
         return (
             json.dumps({"error": str(exc)}),
             500,
-            {"Content-Type": "application/json"},
+            {"Content-Type": "application/json", **_CORS_HEADERS},
         )

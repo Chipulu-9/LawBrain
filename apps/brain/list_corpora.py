@@ -3,7 +3,7 @@ from vertexai.preview import rag
 
 PROJECT = "lawbrain-c4581"
 
-for location in ["us-central1", "us-east1", "europe-west1", "asia-northeast1"]:
+for location in ["us-central1", "us-east1", "us-west1", "us-west4", "europe-west1", "europe-west4", "asia-northeast1"]:
     vertexai.init(project=PROJECT, location=location)
     corpora = list(rag.list_corpora())
     if corpora:

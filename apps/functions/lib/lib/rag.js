@@ -1,11 +1,6 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.retrieveRelevantChunks = retrieveRelevantChunks;
-exports.generateRagAnswer = generateRagAnswer;
-exports.runRagDiagnostics = runRagDiagnostics;
-const generative_ai_1 = require("@google/generative-ai");
-const secret_manager_1 = require("@google-cloud/secret-manager");
-const firebaseAdmin_1 = require("./firebaseAdmin");
+import { GoogleGenerativeAI } from '@google/generative-ai';
+import { SecretManagerServiceClient } from '@google-cloud/secret-manager';
+import { adminDb } from './firebaseAdmin.js';
 const CHUNK_COLLECTION = 'legal_chunks';
 console.log('=== ENV CHECK ===');
 console.log('GEMINI_API_KEY:', process.env.GEMINI_API_KEY ? 'SET' : 'MISSING');
@@ -28,15 +23,12 @@ function cosineSimilarity(a, b) {
         return -1;
     return dot / (Math.sqrt(normA) * Math.sqrt(normB));
 }
-function getGeminiClient() {
-    throw new Error('getGeminiClient was called synchronously; use getGeminiClientAsync instead.');
-}
 let cachedApiKey = null;
 async function getApiKeyFromSecretManager() {
     const secretId = process.env.SECRET_MANAGER_SECRET || process.env.GOOGLE_SECRET_NAME;
     if (!secretId)
         return null;
-    const client = new secret_manager_1.SecretManagerServiceClient();
+    const client = new SecretManagerServiceClient();
     const project = process.env.GOOGLE_CLOUD_PROJECT || process.env.FIREBASE_PROJECT_ID;
     let name = secretId;
     if (!secretId.startsWith('projects/')) {
@@ -70,7 +62,7 @@ async function getApiKey() {
 }
 async function getGeminiClientAsync() {
     const apiKey = await getApiKey();
-    return new generative_ai_1.GoogleGenerativeAI(apiKey);
+    return new GoogleGenerativeAI(apiKey);
 }
 async function embedText(text) {
     console.log('=== SEARCHING DOCUMENTS ===');
@@ -80,13 +72,17 @@ async function embedText(text) {
     const result = await model.embedContent(text);
     return result.embedding.values;
 }
-async function retrieveRelevantChunks(question, topK = 5) {
+export async function retrieveRelevantChunks(question, topK = 5) {
     const queryEmbedding = await embedText(question);
-    const snapshot = await firebaseAdmin_1.adminDb.collection(CHUNK_COLLECTION).get();
+    const snapshot = await adminDb.collection(CHUNK_COLLECTION).get();
     const ranked = snapshot.docs
         .map(docSnap => {
         const data = docSnap.data();
-        if (!data.content || !data.source || !data.title || !data.embedding || !Array.isArray(data.embedding)) {
+        if (!data.content ||
+            !data.source ||
+            !data.title ||
+            !data.embedding ||
+            !Array.isArray(data.embedding)) {
             return null;
         }
         const score = cosineSimilarity(queryEmbedding, data.embedding);
@@ -116,7 +112,7 @@ function buildPrompt(question, contexts) {
 function formatContext(chunk) {
     return `[Source: ${chunk.title} | File: ${chunk.source} | Page: ${chunk.pageNumber ?? 'n/a'} | Chunk: ${chunk.chunkIndex}]\n${chunk.content}`;
 }
-async function generateRagAnswer(question) {
+export async function generateRagAnswer(question) {
     try {
         const ranked = await retrieveRelevantChunks(question, 5);
         const contexts = ranked.map(item => item.chunk);
@@ -167,7 +163,7 @@ async function generateRagAnswer(question) {
         throw error;
     }
 }
-async function runRagDiagnostics() {
+export async function runRagDiagnostics() {
     const envVars = {
         GEMINI_API_KEY: !!process.env.GEMINI_API_KEY,
         GOOGLE_API_KEY: !!process.env.GOOGLE_API_KEY,
@@ -190,11 +186,11 @@ async function runRagDiagnostics() {
         },
     };
     try {
-        const countAggregate = await firebaseAdmin_1.adminDb.collection(CHUNK_COLLECTION).count().get();
+        const countAggregate = await adminDb.collection(CHUNK_COLLECTION).count().get();
         result.documents.count = countAggregate.data().count;
         result.vectorDB.indexCount = countAggregate.data().count;
         result.vectorDB.connected = true;
-        const sampleSnap = await firebaseAdmin_1.adminDb.collection(CHUNK_COLLECTION).limit(1).get();
+        const sampleSnap = await adminDb.collection(CHUNK_COLLECTION).limit(1).get();
         const sampleDoc = sampleSnap.docs[0]?.data();
         if (sampleDoc?.source && sampleDoc?.title) {
             result.documents.sample = {

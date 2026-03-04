@@ -7,8 +7,27 @@ import { generateRagAnswer } from './lib/rag.js'
 
 const app = express()
 
-app.use(cors())
+const allowedOrigins = [
+  'http://localhost:5173', // Vite dev
+  'http://localhost:3000', // fallback
+  ...(process.env.ALLOWED_ORIGIN ? [process.env.ALLOWED_ORIGIN] : []),
+]
+
+app.use(
+  cors({
+    origin: (origin, cb) => {
+      // allow server-to-server calls (no Origin header) and listed origins
+      if (!origin || allowedOrigins.includes(origin)) return cb(null, true)
+      cb(new Error(`CORS: origin ${origin} not allowed`))
+    },
+    credentials: true,
+  })
+)
 app.use(express.json())
+
+app.get('/health', (_req, res) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() })
+})
 
 app.use('/api/trpc', createExpressMiddleware({ router: appRouter }))
 

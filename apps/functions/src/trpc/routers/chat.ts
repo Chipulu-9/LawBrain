@@ -1,7 +1,6 @@
 import { z } from 'zod'
 import { router, publicProcedure } from '../trpc.js'
-
-const ASK_RAG_URL = process.env.ASK_RAG_URL || 'http://localhost:8082'
+import { generateRagAnswer } from '../../lib/rag.js'
 
 export const chatRouter = router({
   ask: publicProcedure
@@ -13,30 +12,15 @@ export const chatRouter = router({
       })
     )
     .mutation(async ({ input }) => {
-      const res = await fetch(ASK_RAG_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query: input.question }),
-      })
+      console.log('=== tRPC chat.ask ===')
+      console.log('User:', input.userId, '| Chat:', input.chatId)
+      console.log('Question:', input.question.slice(0, 120))
 
-      if (!res.ok) {
-        throw new Error(`ask_rag returned ${res.status}: ${await res.text()}`)
-      }
+      const result = await generateRagAnswer(input.question)
 
-      const data = (await res.json()) as {
-        answer: string
-        citations: Array<{ uri: string | null; title: string | null }>
-      }
+      console.log('=== tRPC chat.ask complete ===')
+      console.log('Answer length:', result.answer.length, '| Sources:', result.sources.length)
 
-      return {
-        answer: data.answer,
-        sources: data.citations.map((c, i) => ({
-          source: c.uri ?? null,
-          title: c.title ?? 'Unknown source',
-          pageNumber: null as number | null,
-          chunkIndex: i,
-          snippet: '',
-        })),
-      }
+      return result
     }),
 })

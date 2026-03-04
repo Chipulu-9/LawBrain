@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import { router, publicProcedure } from '../trpc.js'
-import { CreateUserSchema, UserSchema } from '@repo/shared'
+import { CreateUserSchema, UserSchema } from '../../shared/schemas.js'
 
 export const userRouter = router({
   create: publicProcedure
