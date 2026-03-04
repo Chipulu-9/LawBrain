@@ -1,60 +1,65 @@
-import { describe, it, expect } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { describe, it, expect, vi } from 'vitest'
+import { render, screen } from '@testing-library/react'
 import { App } from './App'
 
+// Prevent real Firebase initialization
+vi.mock('./lib/firebase', () => ({
+  auth: {},
+  db: {},
+  default: {},
+}))
+
+// Mock Firebase Auth — resolve onAuthStateChanged immediately as logged-out
+vi.mock('firebase/auth', () => ({
+  getAuth: vi.fn(() => ({})),
+  onAuthStateChanged: vi.fn((_auth: unknown, callback: (user: null) => void) => {
+    callback(null)
+    return vi.fn() // unsubscribe noop
+  }),
+  createUserWithEmailAndPassword: vi.fn(),
+  signInWithEmailAndPassword: vi.fn(),
+  signOut: vi.fn(),
+  GoogleAuthProvider: vi.fn(),
+  signInWithPopup: vi.fn(),
+  sendPasswordResetEmail: vi.fn(),
+  updateProfile: vi.fn(),
+}))
+
+// Mock Firestore — prevent any real DB calls
+vi.mock('firebase/firestore', () => ({
+  getFirestore: vi.fn(() => ({})),
+  doc: vi.fn(),
+  setDoc: vi.fn(),
+  getDoc: vi.fn(() => Promise.resolve({ exists: () => false })),
+  serverTimestamp: vi.fn(() => new Date()),
+  collection: vi.fn(),
+  getDocs: vi.fn(() => Promise.resolve({ docs: [] })),
+  query: vi.fn(),
+  orderBy: vi.fn(),
+}))
+
+// Mock tRPC — trpc.Provider just renders children; no HTTP calls
+vi.mock('./lib/trpc', () => ({
+  trpc: {
+    Provider: ({ children }: { children: unknown }) => children,
+  },
+  trpcClient: {},
+}))
+
 describe('App', () => {
-  it('renders the header with title', () => {
+  it('renders the LawBrain header', () => {
     render(<App />)
-    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('The Hytel Way')
+    expect(screen.getByLabelText('LawBrain home')).toBeInTheDocument()
   })
 
-  it('renders the counter with initial value of 0', () => {
+  it('renders the main heading', () => {
     render(<App />)
-    expect(screen.getByText('0')).toBeInTheDocument()
+    expect(screen.getByText(/Your AI Legal Guide/i)).toBeInTheDocument()
   })
 
-  it('increments the counter when clicking increase button', () => {
+  it('renders the navigation links', () => {
     render(<App />)
-    const increaseButton = screen.getByRole('button', { name: /increment counter/i })
-    fireEvent.click(increaseButton)
-    expect(screen.getByText('1')).toBeInTheDocument()
-  })
-
-  it('decrements the counter when clicking decrease button', () => {
-    render(<App />)
-    const decreaseButton = screen.getByRole('button', { name: /decrement counter/i })
-    fireEvent.click(decreaseButton)
-    expect(screen.getByText('-1')).toBeInTheDocument()
-  })
-
-  it('resets counter to zero when clicking reset button', () => {
-    render(<App />)
-    const increaseButton = screen.getByRole('button', { name: /increment counter/i })
-    const resetButton = screen.getByRole('button', { name: /reset/i })
-
-    // Increment a few times
-    fireEvent.click(increaseButton)
-    fireEvent.click(increaseButton)
-    expect(screen.getByText('2')).toBeInTheDocument()
-
-    // Reset
-    fireEvent.click(resetButton)
-    expect(screen.getByText('0')).toBeInTheDocument()
-  })
-
-  it('renders the stack overview card', () => {
-    render(<App />)
-    expect(screen.getByText('Stack Overview', { exact: false })).toBeInTheDocument()
-  })
-
-  it('renders the monorepo structure card', () => {
-    render(<App />)
-    expect(screen.getByText('Monorepo Structure', { exact: false })).toBeInTheDocument()
-  })
-
-  it('renders Vite and React logos', () => {
-    render(<App />)
-    expect(screen.getByAltText('Vite logo')).toBeInTheDocument()
-    expect(screen.getByAltText('React logo')).toBeInTheDocument()
+    expect(screen.getByLabelText('How it works section')).toBeInTheDocument()
+    expect(screen.getByLabelText('Features section')).toBeInTheDocument()
   })
 })
