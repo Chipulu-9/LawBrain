@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { Scale, Menu, X } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
@@ -10,6 +10,18 @@ export function Navbar() {
   const [authModalOpen, setAuthModalOpen] = useState(false)
   const [authModalMode, setAuthModalMode] = useState<'signin' | 'signup'>('signin')
   const { user, loading } = useAuth()
+  const [hidden, setHidden] = useState(false)
+  const lastScrollY = useRef(0)
+
+  useEffect(() => {
+    function handleScroll() {
+      const y = window.scrollY
+      setHidden(y > lastScrollY.current && y > 80)
+      lastScrollY.current = y
+    }
+    window.addEventListener('scroll', handleScroll, { passive: true })
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [])
 
   const openSignIn = () => {
     setAuthModalMode('signin')
@@ -22,7 +34,9 @@ export function Navbar() {
 
   return (
     <>
-      <header className="sticky top-0 z-50 w-full border-b border-brown-200 bg-brown-50/95 backdrop-blur-sm shadow-sm">
+      <header
+        className={`sticky top-0 z-50 w-full border-b border-brown-200 bg-brown-50/95 backdrop-blur-sm shadow-sm transition-transform duration-300 ${hidden ? '-translate-y-full' : 'translate-y-0'}`}
+      >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             {/* Logo */}

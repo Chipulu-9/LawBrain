@@ -163,6 +163,15 @@ a:hover {
   animation: fade-in 0.5s ease-out forwards;
 }
 
+@keyframes slide-up-full {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+
+.animate-slide-up-full {
+  animation: slide-up-full 0.3s ease-out forwards;
+}
+
 /* =============================================================================
    Hero gradient
    ============================================================================= */

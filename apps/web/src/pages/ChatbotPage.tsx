@@ -13,15 +13,22 @@ import {
 } from 'firebase/firestore'
 import { db } from '../lib/firebase'
 import { useAuth } from '../hooks/useAuth'
-import { trpc } from '../lib/trpc'
+
+const RAG_API_URL = import.meta.env.VITE_RAG_API_URL || 'http://localhost:8082'
 
 type Role = 'user' | 'assistant'
+
+interface Citation {
+  uri: string | null
+  title: string | null
+}
 
 interface ChatMessage {
   messageId: string
   role: Role
   content: string
   timestamp: Date
+  citations?: Citation[]
 }
 
 interface ChatSession {
@@ -60,7 +67,6 @@ function renderText(text: string) {
 
 export function ChatbotPage() {
   const { user } = useAuth()
-  const askMutation = trpc.chat.ask.useMutation()
   const navigate = useNavigate()
   const location = useLocation()
 
@@ -188,6 +194,7 @@ export function ChatbotPage() {
               role?: Role
               content?: string
               timestamp?: Timestamp
+              citations?: Citation[]
             }
 
             if (!data.content || !data.role || !data.timestamp) return null
@@ -196,6 +203,7 @@ export function ChatbotPage() {
               role: data.role,
               content: data.content,
               timestamp: data.timestamp.toDate(),
+              ...(data.citations ? { citations: data.citations } : {}),
             } satisfies ChatMessage
           })
           .filter((item: ChatMessage | null): item is ChatMessage => item !== null)
@@ -233,7 +241,12 @@ export function ChatbotPage() {
     })
   }
 
-  async function persistMessage(chatId: string, role: Role, content: string) {
+  async function persistMessage(
+    chatId: string,
+    role: Role,
+    content: string,
+    citations?: Citation[]
+  ) {
     if (!user) return
 
     const messagesRef = collection(db, 'users', user.uid, 'chats', chatId, 'messages')
@@ -243,6 +256,7 @@ export function ChatbotPage() {
       role,
       content,
       timestamp: serverTimestamp(),
+      ...(citations && citations.length > 0 ? { citations } : {}),
     })
 
     const titleUpdate =
@@ -322,41 +336,37 @@ export function ChatbotPage() {
     }
 
     try {
-      console.log('Sending message:', {
-        userId: user.uid,
-        chatId: targetChatId,
-        question: userText,
-      })
-      const result = await askMutation.mutateAsync({
-        userId: user.uid,
-        chatId: targetChatId,
-        question: userText,
-      })
-      console.log('Response received:', result)
+      console.log('Sending to RAG:', { url: RAG_API_URL, question: userText })
 
-      const citations = result.sources
-        .slice(0, 4)
-        .map(
-          source =>
-            `- According to ${source.title}${source.pageNumber ? `, page ${source.pageNumber}` : ''} (chunk ${source.chunkIndex})`
-        )
-        .join('\n')
+      const response = await fetch(RAG_API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: userText }),
+      })
 
-      const assistantText =
-        citations.length > 0 ? `${result.answer}\n\n**Sources**\n${citations}` : result.answer
+      if (!response.ok) {
+        throw new Error(`RAG API returned ${response.status}: ${response.statusText}`)
+      }
+
+      const result = (await response.json()) as { answer: string; citations: Citation[] }
+      console.log('RAG response received:', {
+        answerLength: result.answer.length,
+        citations: result.citations.length,
+      })
 
       const localAssistantMessage: ChatMessage = {
         messageId: `local-assistant-${Date.now()}`,
         role: 'assistant',
-        content: assistantText,
+        content: result.answer,
         timestamp: new Date(),
+        citations: result.citations.slice(0, 4),
       }
 
       if (currentChatIdRef.current === targetChatId) {
         setMessages(prev => [...prev, localAssistantMessage])
       }
 
-      await persistMessage(targetChatId, 'assistant', assistantText)
+      await persistMessage(targetChatId, 'assistant', result.answer, result.citations.slice(0, 4))
     } catch (error) {
       console.error('Full error:', error)
       console.error('Failed to generate RAG response:', error)
@@ -565,6 +575,29 @@ export function ChatbotPage() {
                             {renderText(line)}
                           </p>
                         ))}
+
+                        {message.role === 'assistant' &&
+                          message.citations &&
+                          message.citations.length > 0 && (
+                            <div className="mt-3 pt-2 border-t border-brown-100">
+                              <p className="text-[10px] font-semibold text-brown-500 uppercase tracking-wide mb-1.5">
+                                Sources
+                              </p>
+                              <ul className="space-y-0.5">
+                                {message.citations.map((c, i) => (
+                                  <li key={i} className="flex items-start gap-1.5">
+                                    <span className="text-[10px] text-amber-600 font-bold mt-px">
+                                      {i + 1}.
+                                    </span>
+                                    <span className="text-[10px] text-brown-500 break-all">
+                                      {c.title || c.uri || 'Unknown source'}
+                                    </span>
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+
                         <p
                           className={`text-[10px] mt-2 ${
                             message.role === 'user' ? 'text-brown-200' : 'text-brown-400'
