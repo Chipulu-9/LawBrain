@@ -219,7 +219,7 @@ export function ChatbotWidget() {
     <>
       {/* ── Fullscreen Chat Panel ── */}
       {open && (
-        <div className="fixed inset-0 z-[60] flex flex-col bg-gradient-to-br from-stone-50 via-amber-50/30 to-amber-100/40 animate-slide-up-full">
+        <div className="fixed inset-0 z-[60] flex flex-col parchment-pattern animate-slide-up-full">
           {/* Header */}
           <div className="flex items-center gap-3 px-4 py-3 bg-white/80 backdrop-blur-sm border-b border-stone-200 flex-shrink-0">
             <button
@@ -335,7 +335,7 @@ export function ChatbotWidget() {
             {/* Main chat area */}
             <div className="flex-1 flex flex-col min-w-0">
               {/* Messages */}
-              <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4 bg-gradient-to-br from-stone-50 via-amber-50/30 to-amber-100/40">
+              <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4 parchment-pattern">
                 {messages.map(msg => (
                   <div
                     key={msg.id}

@@ -424,8 +424,8 @@ export function ChatbotPage() {
   }
 
   return (
-    <section className="h-screen bg-brown-50">
-      <header className="fixed top-0 left-0 right-0 h-16 z-40 border-b border-brown-200 bg-brown-50/95 backdrop-blur-sm">
+    <section className="h-screen parchment-pattern">
+      <header className="fixed top-0 left-0 right-0 h-16 z-40 border-b border-brown-200 bg-[hsl(35_60%_97%)]/95 backdrop-blur-sm">
         <div className="h-full max-w-5xl mx-auto px-4 sm:px-6 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
             <button
