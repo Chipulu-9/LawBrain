@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useMemo } from 'react'
 import { MessageCircle, X, Send, Scale, Plus, Trash2, Menu, ArrowRight } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
 import { useLanguage } from '../hooks/useLanguage'
@@ -73,7 +73,7 @@ export function ChatbotWidget() {
 
   // activeId='' falls back to sessions[0] via activeSession below
   const activeSession = sessions.find(s => s.id === activeId) ?? sessions[0]
-  const messages = activeSession?.messages ?? []
+  const messages = useMemo(() => activeSession?.messages ?? [], [activeSession?.messages])
 
   useEffect(() => {
     if (open) setShowPulse(false)

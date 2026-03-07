@@ -84,6 +84,7 @@ export function ChatbotPage() {
   const initialQueryRef = useRef<string | null>(
     ((location.state as { query?: string } | null)?.query || '').trim() || null
   )
+  const handleSendRef = useRef<((rawText?: string) => Promise<void>) | null>(null)
 
   const chatsRef = useMemo(() => {
     if (!user) return null
@@ -396,11 +397,13 @@ export function ChatbotPage() {
     }
   }
 
+  handleSendRef.current = handleSend
+
   useEffect(() => {
     if (historyLoading || !initialQueryRef.current || !currentChatId) return
     const queryText = initialQueryRef.current
     initialQueryRef.current = null
-    void handleSend(queryText)
+    void handleSendRef.current?.(queryText)
   }, [historyLoading, currentChatId])
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
