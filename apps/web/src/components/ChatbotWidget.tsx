@@ -58,7 +58,7 @@ const WELCOME_TEXT =
 
 export function ChatbotWidget() {
   const { user } = useAuth()
-  const { locale, t, translateText } = useLanguage()
+  const { t, isDetecting, detectAndSetLanguage } = useLanguage()
   const [open, setOpen] = useState(false)
   const [showPulse, setShowPulse] = useState(true)
   const [sessions, setSessions] = useState<ChatSession[]>(() => [newSession(WELCOME_TEXT)])
@@ -162,22 +162,23 @@ export function ChatbotWidget() {
     setLoading(true)
     ;(async () => {
       try {
+        // Detect language first, then send to RAG — RAG will reply in that language
+        const detectedLocale = await detectAndSetLanguage(userText)
+
         const response = await fetch(RAG_API_URL, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ query: userText, locale }),
+          body: JSON.stringify({ query: userText, locale: detectedLocale, response_language: detectedLocale }),
         })
         if (!response.ok) throw new Error(`HTTP ${response.status}`)
         const result = (await response.json()) as {
           answer: string
           citations: { uri: string | null; title: string | null }[]
         }
-        const answerText =
-          locale !== 'en' ? await translateText(result.answer) : result.answer
         const aiMsg: Message = {
           id: (Date.now() + 1).toString(),
           role: 'assistant',
-          text: answerText,
+          text: result.answer,
           time: now(),
         }
         setSessions(prev =>
@@ -214,33 +215,33 @@ export function ChatbotWidget() {
     <>
       {/* ── Fullscreen Chat Panel ── */}
       {open && (
-        <div className="fixed inset-0 z-40 flex flex-col bg-white animate-slide-up-full">
+        <div className="fixed inset-0 z-[60] flex flex-col bg-gradient-to-br from-stone-50 via-amber-50/30 to-amber-100/40 animate-slide-up-full">
           {/* Header */}
-          <div className="flex items-center gap-3 px-4 py-3 bg-gradient-to-r from-amber-600 to-amber-700 text-white flex-shrink-0">
+          <div className="flex items-center gap-3 px-4 py-3 bg-white/80 backdrop-blur-sm border-b border-stone-200 flex-shrink-0">
             <button
               onClick={() => setSidebarOpen(v => !v)}
-              className="md:hidden p-1.5 rounded-lg hover:bg-amber-500/30 transition text-white/70 hover:text-white"
+              className="md:hidden p-1.5 rounded-lg hover:bg-stone-100 transition text-stone-500 hover:text-stone-700"
               aria-label="Toggle sidebar"
             >
               <Menu className="w-5 h-5" />
             </button>
-            <div className="w-8 h-8 rounded-full bg-amber-500/30 flex items-center justify-center shadow border border-amber-400/40 flex-shrink-0">
-              <Scale className="w-4 h-4 text-white" strokeWidth={1.8} />
+            <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center shadow-sm border border-amber-200 flex-shrink-0">
+              <Scale className="w-4 h-4 text-amber-700" strokeWidth={1.8} />
             </div>
             <div className="flex-1 min-w-0">
-              <div className="font-serif font-bold text-sm text-white leading-tight">
+              <div className="font-serif font-bold text-sm text-stone-800 leading-tight">
                 LawBrain AI
               </div>
               <div className="flex items-center gap-1.5 mt-0.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-green-300 animate-pulse" />
-                <span className="text-[10px] text-amber-100">
+                <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+                <span className="text-[10px] text-stone-500">
                   {t('app.tagline', 'Zambian Legal Assistant')}
                 </span>
               </div>
             </div>
             <button
               onClick={() => setOpen(false)}
-              className="p-1.5 rounded-lg hover:bg-amber-500/30 transition text-white/70 hover:text-white"
+              className="p-1.5 rounded-lg hover:bg-stone-100 transition text-stone-500 hover:text-stone-700"
               aria-label="Close"
             >
               <X className="w-5 h-5" />
@@ -261,14 +262,14 @@ export function ChatbotWidget() {
 
             {/* Sidebar */}
             <aside
-              className={`absolute md:relative top-0 left-0 h-full w-64 z-20 bg-stone-900 flex flex-col flex-shrink-0 transition-transform duration-300 ${
+              className={`absolute md:relative top-0 left-0 h-full w-64 z-20 bg-white border-r border-stone-200 flex flex-col flex-shrink-0 transition-transform duration-300 ${
                 sidebarOpen ? 'translate-x-0' : '-translate-x-full'
               } md:translate-x-0`}
             >
-              <div className="p-3 border-b border-stone-700">
+              <div className="p-3 border-b border-stone-200">
                 <button
                   onClick={handleNewChat}
-                  className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-sm font-semibold transition"
+                  className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-amber-100 hover:bg-amber-200 text-amber-800 border border-amber-200 text-sm font-semibold transition"
                 >
                   <Plus className="w-4 h-4" />
                   {t('nav.chat', 'New Chat')}
@@ -278,7 +279,7 @@ export function ChatbotWidget() {
                 {sessions.map(s => (
                   <div key={s.id} className="group relative">
                     {deleteConfirmId === s.id ? (
-                      <div className="px-3 py-2 rounded-lg bg-red-900/80 text-xs text-red-100">
+                      <div className="px-3 py-2 rounded-lg bg-red-50 border border-red-200 text-xs text-red-700">
                         <p className="mb-2 font-medium">
                           {t('common.delete', 'Delete')} this chat?
                         </p>
@@ -291,7 +292,7 @@ export function ChatbotWidget() {
                           </button>
                           <button
                             onClick={() => setDeleteConfirmId(null)}
-                            className="flex-1 py-1 rounded bg-stone-700 hover:bg-stone-600 text-stone-100 transition"
+                            className="flex-1 py-1 rounded bg-stone-100 hover:bg-stone-200 text-stone-600 transition"
                           >
                             {t('common.cancel', 'Cancel')}
                           </button>
@@ -302,12 +303,12 @@ export function ChatbotWidget() {
                         onClick={() => handleSelectSession(s.id)}
                         className={`w-full text-left px-3 py-2 pr-8 rounded-lg text-sm transition ${
                           s.id === activeSession?.id
-                            ? 'bg-stone-700 text-stone-50'
-                            : 'text-stone-300 hover:bg-stone-800 hover:text-stone-100'
+                            ? 'bg-amber-100 text-amber-900 border-l-2 border-amber-600'
+                            : 'text-stone-600 hover:bg-amber-50 hover:text-stone-800'
                         }`}
                       >
                         <p className="truncate font-medium">{s.title}</p>
-                        <p className="text-[10px] text-stone-500 mt-0.5">
+                        <p className="text-[10px] text-stone-400 mt-0.5">
                           {s.messages.filter(m => m.role === 'user').length} message
                           {s.messages.filter(m => m.role === 'user').length !== 1 ? 's' : ''}
                         </p>
@@ -316,7 +317,7 @@ export function ChatbotWidget() {
                     {deleteConfirmId !== s.id && (
                       <button
                         onClick={() => setDeleteConfirmId(s.id)}
-                        className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded opacity-0 group-hover:opacity-100 text-stone-500 hover:text-red-400 transition"
+                        className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded opacity-0 group-hover:opacity-100 text-stone-400 hover:text-red-500 transition"
                         aria-label="Delete chat"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
@@ -330,14 +331,14 @@ export function ChatbotWidget() {
             {/* Main chat area */}
             <div className="flex-1 flex flex-col min-w-0">
               {/* Messages */}
-              <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4 bg-amber-50/30">
+              <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4 bg-gradient-to-br from-stone-50 via-amber-50/30 to-amber-100/40">
                 {messages.map(msg => (
                   <div
                     key={msg.id}
                     className={`flex gap-2.5 animate-fade-in ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}
                   >
                     {msg.role === 'assistant' && (
-                      <div className="flex-shrink-0 w-7 h-7 rounded-full bg-amber-700 flex items-center justify-center text-amber-100 font-serif text-xs shadow">
+                      <div className="flex-shrink-0 w-7 h-7 rounded-full bg-amber-100 flex items-center justify-center text-amber-700 font-serif text-xs shadow-sm border border-amber-200">
                         ⚖
                       </div>
                     )}
@@ -345,10 +346,10 @@ export function ChatbotWidget() {
                       className={`flex flex-col gap-1 max-w-[80%] ${msg.role === 'user' ? 'items-end' : 'items-start'}`}
                     >
                       <div
-                        className={`px-3.5 py-2.5 text-sm leading-relaxed shadow-sm ${
+                        className={`px-3.5 py-2.5 text-sm leading-relaxed ${
                           msg.role === 'user'
-                            ? 'bg-amber-600 text-white rounded-2xl rounded-br-md'
-                            : 'bg-white border border-amber-200 text-stone-800 rounded-2xl rounded-bl-md'
+                            ? 'bg-amber-700 text-white rounded-2xl rounded-br-md shadow-sm'
+                            : 'bg-white border border-stone-200 text-stone-800 rounded-2xl rounded-bl-md shadow-sm'
                         }`}
                       >
                         {msg.text.split('\n').map((line, i) => (
@@ -364,24 +365,22 @@ export function ChatbotWidget() {
 
                 {loading && (
                   <div className="flex gap-2.5 animate-fade-in">
-                    <div className="flex-shrink-0 w-7 h-7 rounded-full bg-amber-700 flex items-center justify-center text-amber-100 font-serif text-xs shadow">
+                    <div className="flex-shrink-0 w-7 h-7 rounded-full bg-amber-100 flex items-center justify-center text-amber-700 font-serif text-xs shadow-sm border border-amber-200">
                       ⚖
                     </div>
-                    <div className="px-4 py-3 bg-white border border-amber-200 rounded-2xl rounded-bl-md shadow-sm">
-                      <div className="flex gap-1 items-center">
-                        <span
-                          className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-bounce"
-                          style={{ animationDelay: '0ms' }}
-                        />
-                        <span
-                          className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-bounce"
-                          style={{ animationDelay: '150ms' }}
-                        />
-                        <span
-                          className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-bounce"
-                          style={{ animationDelay: '300ms' }}
-                        />
-                      </div>
+                    <div className="px-4 py-3 bg-white border border-stone-200 rounded-2xl rounded-bl-md shadow-sm">
+                      {isDetecting ? (
+                        <div className="flex items-center gap-2 text-xs text-amber-600">
+                          <span className="w-3.5 h-3.5 border-2 border-amber-500 border-t-transparent rounded-full animate-spin flex-shrink-0" />
+                          Detecting language…
+                        </div>
+                      ) : (
+                        <div className="flex gap-1 items-center">
+                          <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-bounce" style={{ animationDelay: '0ms' }} />
+                          <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-bounce" style={{ animationDelay: '150ms' }} />
+                          <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-bounce" style={{ animationDelay: '300ms' }} />
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
@@ -392,7 +391,7 @@ export function ChatbotWidget() {
                       <button
                         key={s}
                         onClick={() => handleSend(s)}
-                        className="flex items-center gap-1 text-xs font-medium text-stone-700 bg-white border border-amber-200 rounded-full px-3 py-1.5 hover:bg-amber-50 transition shadow-sm"
+                        className="flex items-center gap-1 text-xs font-medium text-stone-600 bg-white border border-stone-200 rounded-full px-3 py-1.5 hover:bg-amber-50 hover:border-amber-200 transition shadow-sm"
                       >
                         <ArrowRight className="w-3 h-3 text-amber-600 flex-shrink-0" />
                         {s}
@@ -405,8 +404,8 @@ export function ChatbotWidget() {
               </div>
 
               {/* Disclaimer */}
-              <div className="px-4 py-2 bg-amber-50 border-t border-amber-100 flex-shrink-0">
-                <p className="text-[11px] text-amber-700 text-center">
+              <div className="px-4 py-2 bg-white/80 border-t border-stone-200 flex-shrink-0">
+                <p className="text-[11px] text-amber-700/80 text-center">
                   {t(
                     'chat.disclaimer',
                     'This is AI-generated information, not legal advice. Consult a lawyer for specific cases.'
@@ -415,21 +414,21 @@ export function ChatbotWidget() {
               </div>
 
               {/* Input */}
-              <div className="flex items-end gap-2 px-4 py-3 border-t border-amber-200 bg-white flex-shrink-0">
+              <div className="flex items-end gap-2 px-4 py-3 bg-white/80 backdrop-blur-sm border-t border-stone-200 flex-shrink-0">
                 <textarea
                   ref={inputRef}
                   value={input}
                   onChange={e => setInput(e.target.value)}
                   onKeyDown={handleKeyDown}
-                  placeholder={t('chat.placeholder', 'Type your legal question... (Enter to send)')}
+                  placeholder={t('chat.placeholder', 'Type in any language... (Enter to send)')}
                   rows={1}
-                  className="flex-1 resize-none bg-stone-100 border border-stone-200 rounded-xl px-3 py-2.5 text-sm text-stone-900 placeholder-stone-400 outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-200 transition max-h-24 leading-relaxed"
+                  className="flex-1 resize-none bg-white border border-stone-200 rounded-xl px-3 py-2.5 text-sm text-stone-900 placeholder-stone-400 outline-none focus:border-amber-300 focus:ring-1 focus:ring-amber-200 transition max-h-24 leading-relaxed shadow-sm"
                   style={{ scrollbarWidth: 'none' }}
                 />
                 <button
                   onClick={() => handleSend()}
                   disabled={!input.trim() || loading}
-                  className="flex-shrink-0 p-2.5 bg-amber-600 hover:bg-amber-700 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-full shadow transition cursor-pointer outline-none focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:ring-offset-2 active:scale-95"
+                  className="flex-shrink-0 p-2.5 bg-amber-700 hover:bg-amber-800 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-full shadow-sm transition cursor-pointer outline-none focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:ring-offset-2 active:scale-95"
                   aria-label={t('chat.send', 'Send message')}
                 >
                   <Send className="w-4 h-4" />
@@ -441,18 +440,18 @@ export function ChatbotWidget() {
       )}
 
       {/* ── Floating Button ── */}
-      <div className="fixed bottom-5 right-4 sm:right-6 z-50">
+      <div className="fixed bottom-5 right-4 sm:right-6 z-[70]">
         {showPulse && (
-          <span className="absolute inset-0 rounded-full bg-amber-500 opacity-60 animate-pulse-ring" />
+          <span className="absolute inset-0 rounded-full bg-amber-600 opacity-60 animate-pulse-ring" />
         )}
         {!open && (
-          <div className="absolute bottom-1 right-16 bg-amber-800 text-amber-100 text-xs font-semibold px-3 py-1.5 rounded-full shadow-lg whitespace-nowrap animate-fade-in pointer-events-none">
+          <div className="absolute bottom-1 right-16 bg-stone-800 text-stone-100 text-xs font-semibold px-3 py-1.5 rounded-full shadow-lg whitespace-nowrap animate-fade-in pointer-events-none">
             Chat with LawBrain ⚖
           </div>
         )}
         <button
           onClick={() => setOpen(v => !v)}
-          className="relative w-14 h-14 rounded-full bg-amber-600 hover:bg-amber-700 text-white shadow-xl hover:shadow-2xl transition-all duration-200 flex items-center justify-center group hover:scale-105 active:scale-95 cursor-pointer outline-none focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:ring-offset-2"
+          className="relative w-14 h-14 rounded-full bg-amber-700 hover:bg-amber-800 text-white shadow-xl hover:shadow-2xl transition-all duration-200 flex items-center justify-center group hover:scale-105 active:scale-95 cursor-pointer outline-none focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:ring-offset-2"
           aria-label={open ? 'Close chat' : 'Open LawBrain chat'}
         >
           {open ? (

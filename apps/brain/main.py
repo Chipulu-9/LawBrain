@@ -170,6 +170,7 @@ def ask_rag(request):
     try:
         body = request.get_json(silent=True) or {}
         query: str = body.get("query", "").strip()
+        response_language: str = body.get("response_language", "en")
 
         if not query:
             return (
@@ -189,9 +190,18 @@ def ask_rag(request):
             )
         )
 
+        language_instructions: dict[str, str] = {
+            "en": "Respond in English.",
+            "bem": "Respond in Bemba (Ichibemba). Use clear, simple language.",
+            "nya": "Respond in Nyanja (Chinyanja). Use clear, simple language.",
+            "toi": "Respond in Tonga (Chitonga). Use clear, simple language.",
+        }
+        lang_instruction = language_instructions.get(response_language, language_instructions["en"])
+        prompt = f"{lang_instruction}\n\nUser question: {query}"
+
         response = client.models.generate_content(
             model="gemini-2.5-flash",
-            contents=query,
+            contents=prompt,
             config=types.GenerateContentConfig(
                 tools=[rag_tool],
                 temperature=0.7,

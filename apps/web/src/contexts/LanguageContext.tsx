@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react'
 import type { ReactNode } from 'react'
+import { detectLanguage, mapToSupportedLocale } from '../services/languageDetection'
 
 export type Locale = 'en' | 'bem' | 'nya' | 'toi'
 
@@ -46,7 +47,10 @@ interface LanguageContextValue {
   setLocale: (locale: Locale) => void
   t: (key: string, fallback?: string) => string
   isLoading: boolean
+  isDetecting: boolean
   translateText: (text: string, targetLocale?: Locale) => Promise<string>
+  detectAndSetLanguage: (text: string) => Promise<Locale>
+  detectedLanguage: string | null
 }
 
 const LanguageContext = createContext<LanguageContextValue | null>(null)
@@ -61,6 +65,8 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   const [translations, setTranslations] =
     useState<Record<string, string>>(DEFAULT_TRANSLATIONS)
   const [isLoading, setIsLoading] = useState(false)
+  const [isDetecting, setIsDetecting] = useState(false)
+  const [detectedLanguage, setDetectedLanguage] = useState<string | null>(null)
 
   const fetchTranslations = useCallback(async (targetLocale: Locale) => {
     if (targetLocale === 'en' || !LANGUAGE_API_URL) {
@@ -143,8 +149,38 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     [locale]
   )
 
+  const detectAndSetLanguage = useCallback(
+    async (text: string): Promise<Locale> => {
+      setIsDetecting(true)
+      try {
+        const raw = await detectLanguage(text)
+        setDetectedLanguage(raw)
+        const mapped = mapToSupportedLocale(raw) as Locale
+        // Only switch locale if we detected a supported non-English language
+        if (mapped !== locale) {
+          setLocale(mapped)
+        }
+        return mapped
+      } finally {
+        setIsDetecting(false)
+      }
+    },
+    [locale, setLocale]
+  )
+
   return (
-    <LanguageContext.Provider value={{ locale, setLocale, t, isLoading, translateText }}>
+    <LanguageContext.Provider
+      value={{
+        locale,
+        setLocale,
+        t,
+        isLoading,
+        isDetecting,
+        translateText,
+        detectAndSetLanguage,
+        detectedLanguage,
+      }}
+    >
       {children}
     </LanguageContext.Provider>
   )
