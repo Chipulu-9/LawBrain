@@ -13,7 +13,7 @@
     "@google/generative-ai": "^0.21.0",
     "@repo/shared": "workspace:*",
     "dotenv": "^16.4.5",
-    "firebase-admin": "^12.7.0",
+    "firebase-admin": "^13.6.0",
     "glob": "^11.0.0",
     "pdf-parse": "^1.1.1"
   },
