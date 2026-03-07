@@ -3,7 +3,10 @@
   "compilerOptions": {
     "jsx": "react-jsx",
     "moduleResolution": "bundler",
-    "types": ["vitest/globals"]
+    "types": ["vitest/globals"],
+    "paths": {
+      "@repo/functions/router": ["../../apps/functions/src/trpc/router.ts"]
+    }
   },
   "include": ["src", "vite.config.ts"]
 }

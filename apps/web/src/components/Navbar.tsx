@@ -4,6 +4,7 @@ import { Scale, Menu, X } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
 import { AuthModal } from './AuthModal'
 import { UserMenu } from './UserMenu'
+import { LanguageSwitcher } from './LanguageSwitcher'
 
 export function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false)
@@ -89,6 +90,7 @@ export function Navbar() {
 
             {/* CTA / User */}
             <div className="hidden md:flex items-center gap-3">
+              <LanguageSwitcher />
               {loading ? (
                 <div className="flex items-center gap-3">
                   <div className="h-9 w-20 rounded-lg bg-brown-200 animate-pulse" />
@@ -159,6 +161,9 @@ export function Navbar() {
             >
               Legal Corpus
             </a>
+            <div className="pt-2 pb-1">
+              <LanguageSwitcher compact />
+            </div>
             <div className="pt-2 flex flex-col gap-2">
               {loading ? (
                 <div className="h-10 rounded-lg bg-brown-200 animate-pulse" />

@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { AuthProvider } from './context/AuthContext'
+import { LanguageProvider } from './contexts/LanguageContext'
 import { Navbar } from './components/Navbar'
 import { Footer } from './components/Footer'
 import { ChatbotWidget } from './components/ChatbotWidget'
@@ -15,6 +16,7 @@ export function App() {
   return (
     <trpc.Provider client={trpcClient} queryClient={queryClient}>
       <QueryClientProvider client={queryClient}>
+        <LanguageProvider>
         <AuthProvider>
           <Toaster position="top-center" />
           <BrowserRouter>
@@ -35,6 +37,7 @@ export function App() {
             </div>
           </BrowserRouter>
         </AuthProvider>
+        </LanguageProvider>
       </QueryClientProvider>
     </trpc.Provider>
   )
