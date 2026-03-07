@@ -17,26 +17,26 @@ export function App() {
     <trpc.Provider client={trpcClient} queryClient={queryClient}>
       <QueryClientProvider client={queryClient}>
         <LanguageProvider>
-        <AuthProvider>
-          <Toaster position="top-center" />
-          <BrowserRouter>
-            <div className="flex flex-col min-h-screen bg-background">
-              <Navbar />
-              <main className="flex-1">
-                <Routes>
-                  {/* Public */}
-                  <Route path="/" element={<LandingPage />} />
-                  {/* Protected — add authenticated pages here, e.g.:
+          <AuthProvider>
+            <Toaster position="top-center" />
+            <BrowserRouter>
+              <div className="flex flex-col min-h-screen bg-background">
+                <Navbar />
+                <main className="flex-1">
+                  <Routes>
+                    {/* Public */}
+                    <Route path="/" element={<LandingPage />} />
+                    {/* Protected — add authenticated pages here, e.g.:
                       <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
                   */}
-                </Routes>
-              </main>
-              <Footer />
-              {/* ChatbotWidget internally checks auth and renders nothing when logged out */}
-              <ChatbotWidget />
-            </div>
-          </BrowserRouter>
-        </AuthProvider>
+                  </Routes>
+                </main>
+                <Footer />
+                {/* ChatbotWidget internally checks auth and renders nothing when logged out */}
+                <ChatbotWidget />
+              </div>
+            </BrowserRouter>
+          </AuthProvider>
         </LanguageProvider>
       </QueryClientProvider>
     </trpc.Provider>

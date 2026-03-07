@@ -103,9 +103,7 @@ export function LanguageSwitcher({ compact = false }: LanguageSwitcherProps) {
                   <span className="ml-1.5 text-xs text-stone-500">({lang.name})</span>
                 )}
               </div>
-              {locale === lang.code && (
-                <Check className="w-4 h-4 text-amber-600 flex-shrink-0" />
-              )}
+              {locale === lang.code && <Check className="w-4 h-4 text-amber-600 flex-shrink-0" />}
             </button>
           ))}
         </div>

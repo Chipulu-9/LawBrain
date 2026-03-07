@@ -62,8 +62,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     const stored = localStorage.getItem('lawbrain-locale')
     return (stored as Locale) || 'en'
   })
-  const [translations, setTranslations] =
-    useState<Record<string, string>>(DEFAULT_TRANSLATIONS)
+  const [translations, setTranslations] = useState<Record<string, string>>(DEFAULT_TRANSLATIONS)
   const [isLoading, setIsLoading] = useState(false)
   const [isDetecting, setIsDetecting] = useState(false)
   const [detectedLanguage, setDetectedLanguage] = useState<string | null>(null)

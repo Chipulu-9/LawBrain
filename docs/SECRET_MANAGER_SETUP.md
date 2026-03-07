@@ -133,6 +133,7 @@ File: [apps/functions/src/lib/rag.ts](../../apps/functions/src/lib/rag.ts)
 - `getGeminiClientAsync()` — Creates GoogleGenerativeAI client with retrieved key
 
 **Usage:**
+
 ```typescript
 const client = await getGeminiClientAsync()
 const model = client.getGenerativeModel({ model: 'gemini-2.0-flash-lite' })
@@ -147,6 +148,7 @@ File: [apps/ingestion/src/index.ts](../../apps/ingestion/src/index.ts)
 - Initializes client in `main()` after fetching API key
 
 **Usage:**
+
 ```bash
 # Run with local fallback
 export GEMINI_API_KEY="your-key"

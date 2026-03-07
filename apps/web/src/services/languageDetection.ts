@@ -60,7 +60,7 @@ export function mapToSupportedLocale(detectedCode: string): string {
     bem: 'bem', // Bemba
     nya: 'nya', // Nyanja
     toi: 'toi', // Tonga
-    ny: 'nya',  // Chichewa/Nyanja alternate ISO code
+    ny: 'nya', // Chichewa/Nyanja alternate ISO code
   }
   return map[detectedCode] ?? 'en'
 }

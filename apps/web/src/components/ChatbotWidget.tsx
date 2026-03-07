@@ -168,7 +168,11 @@ export function ChatbotWidget() {
         const response = await fetch(RAG_API_URL, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ query: userText, locale: detectedLocale, response_language: detectedLocale }),
+          body: JSON.stringify({
+            query: userText,
+            locale: detectedLocale,
+            response_language: detectedLocale,
+          }),
         })
         if (!response.ok) throw new Error(`HTTP ${response.status}`)
         const result = (await response.json()) as {
@@ -376,9 +380,18 @@ export function ChatbotWidget() {
                         </div>
                       ) : (
                         <div className="flex gap-1 items-center">
-                          <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-bounce" style={{ animationDelay: '0ms' }} />
-                          <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-bounce" style={{ animationDelay: '150ms' }} />
-                          <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-bounce" style={{ animationDelay: '300ms' }} />
+                          <span
+                            className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-bounce"
+                            style={{ animationDelay: '0ms' }}
+                          />
+                          <span
+                            className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-bounce"
+                            style={{ animationDelay: '150ms' }}
+                          />
+                          <span
+                            className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-bounce"
+                            style={{ animationDelay: '300ms' }}
+                          />
                         </div>
                       )}
                     </div>

@@ -1,6 +1,7 @@
 # Complete RAG (Retrieval-Augmented Generation) Implementation Guide
 
 ## Table of Contents
+
 1. [Overview](#overview)
 2. [Architecture](#architecture)
 3. [Prerequisites](#prerequisites)
@@ -22,6 +23,7 @@
 This guide provides a complete template for building a production-ready RAG system using Google Cloud Platform, Firebase, and Vertex AI. The system processes documents, generates embeddings, stores them in Firestore, and provides intelligent retrieval for AI-powered analysis.
 
 ### Key Features
+
 - **Document Processing**: PDF text extraction and intelligent chunking
 - **Vector Embeddings**: Using Google's latest `text-embedding-004` model
 - **Scalable Storage**: Firestore for metadata and embeddings
@@ -39,16 +41,17 @@ graph TB
     C --> D[Intelligent Chunking]
     D --> E[Vertex AI Embeddings]
     E --> F[Firestore Storage]
-    
+
     G[User Query] --> H[Firebase Function]
     H --> I[Load Framework Data]
     I --> J[Gemini Analysis]
     J --> K[Response]
-    
+
     F --> I
 ```
 
 ### Components
+
 1. **Google Cloud Storage (GCS)**: Document storage
 2. **Vertex AI**: Embedding generation and LLM inference
 3. **Firestore**: Vector database and metadata storage
@@ -60,6 +63,7 @@ graph TB
 ## Prerequisites
 
 ### Required Tools
+
 ```bash
 # Install Google Cloud CLI
 curl https://sdk.cloud.google.com | bash
@@ -73,6 +77,7 @@ pip install -r requirements.txt
 ```
 
 ### Required APIs
+
 - Cloud Storage API
 - Firestore API
 - Vertex AI API
@@ -90,12 +95,14 @@ pip install -r requirements.txt
 Run the setup script (choose your platform):
 
 **Linux/Mac:**
+
 ```bash
 chmod +x scripts/setup-gcloud.sh
 ./scripts/setup-gcloud.sh
 ```
 
 **Windows PowerShell:**
+
 ```powershell
 Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 .\scripts\setup-gcloud.ps1
@@ -207,7 +214,7 @@ aiplatform.init(project=PROJECT_ID, location=LOCATION)
 def extract_text_from_pdf(pdf_bytes: bytes) -> List[Dict[str, Any]]:
     """Extract text from PDF with page information."""
     text_items = []
-    
+
     with pdfplumber.open(pdf_bytes) as pdf:
         for page_num, page in enumerate(pdf.pages, 1):
             text = page.extract_text()
@@ -220,29 +227,29 @@ def extract_text_from_pdf(pdf_bytes: bytes) -> List[Dict[str, Any]]:
                         "total_pages": len(pdf.pages)
                     }
                 })
-    
+
     return text_items
 
 def chunk_text_intelligent(
-    text_items: List[Dict[str, Any]], 
-    max_tokens: int = 500, 
+    text_items: List[Dict[str, Any]],
+    max_tokens: int = 500,
     overlap_tokens: int = 50
 ) -> List[Dict[str, Any]]:
     """Intelligent text chunking with overlap."""
     chunks = []
-    
+
     for item in text_items:
         text = item["text"]
         page = item["page"]
-        
+
         # Simple sentence-based chunking
         sentences = text.split('. ')
         current_chunk = ""
         current_tokens = 0
-        
+
         for sentence in sentences:
             sentence_tokens = len(sentence.split())
-            
+
             if current_tokens + sentence_tokens > max_tokens and current_chunk:
                 # Save current chunk
                 chunks.append({
@@ -251,7 +258,7 @@ def chunk_text_intelligent(
                     "tokens": current_tokens,
                     "metadata": item["metadata"]
                 })
-                
+
                 # Start new chunk with overlap
                 overlap_text = '. '.join(current_chunk.split('. ')[-2:])
                 current_chunk = overlap_text + '. ' + sentence
@@ -259,7 +266,7 @@ def chunk_text_intelligent(
             else:
                 current_chunk += '. ' + sentence if current_chunk else sentence
                 current_tokens += sentence_tokens
-        
+
         # Add final chunk
         if current_chunk.strip():
             chunks.append({
@@ -268,24 +275,24 @@ def chunk_text_intelligent(
                 "tokens": current_tokens,
                 "metadata": item["metadata"]
             })
-    
+
     return chunks
 
 def generate_embeddings(
-    texts: List[str], 
+    texts: List[str],
     model_name: str = "text-embedding-004",
     task_type: str = "RETRIEVAL_DOCUMENT"
 ) -> List[List[float]]:
     """Generate embeddings using Vertex AI."""
     try:
         model = TextEmbeddingModel.from_pretrained(model_name)
-        
+
         embeddings = model.get_embeddings(
             texts,
             output_dimensionality=768,  # Cost-optimized dimension
             task_type=task_type
         )
-        
+
         return [list(emb.values) for emb in embeddings]
     except Exception as e:
         print(f"Error generating embeddings: {e}")
@@ -298,7 +305,7 @@ def store_in_firestore(
     embeddings: List[List[float]]
 ) -> None:
     """Store chunks and embeddings in Firestore."""
-    
+
     # Create document metadata
     doc_ref = firestore_client.collection(collection_name).document(document_name)
     doc_ref.set({
@@ -308,15 +315,15 @@ def store_in_firestore(
         "updated_at": datetime.utcnow(),
         "status": "processed"
     })
-    
+
     # Store chunks in subcollection
     chunks_ref = doc_ref.collection("chunks")
     batch = firestore_client.batch()
     batch_count = 0
-    
+
     for i, (chunk, embedding) in enumerate(zip(chunks, embeddings)):
         chunk_doc = chunks_ref.document(f"chunk_{i:04d}")
-        
+
         chunk_data = {
             "text": chunk["text"],
             "page": chunk["page"],
@@ -326,17 +333,17 @@ def store_in_firestore(
             "metadata": chunk["metadata"],
             "created_at": datetime.utcnow()
         }
-        
+
         batch.set(chunk_doc, chunk_data)
         batch_count += 1
-        
+
         # Commit batch every 500 operations (Firestore limit)
         if batch_count >= 500:
             batch.commit()
             batch = firestore_client.batch()
             batch_count = 0
             print(f"  Committed batch of 500 chunks...")
-    
+
     # Commit remaining chunks
     if batch_count > 0:
         batch.commit()
@@ -345,38 +352,38 @@ def store_in_firestore(
 def process_document(gcs_path: str, collection_name: str, document_name: str):
     """Main processing function."""
     print(f"Processing {document_name} from {gcs_path}...")
-    
+
     # Download from GCS
     bucket = storage_client.bucket(GCS_BUCKET_NAME)
     blob = bucket.blob(gcs_path)
     pdf_bytes = blob.download_as_bytes()
-    
+
     # Extract text
     print("Extracting text...")
     text_items = extract_text_from_pdf(pdf_bytes)
-    
+
     # Chunk text
     print("Chunking text...")
     chunks = chunk_text_intelligent(text_items, max_tokens=500, overlap_tokens=50)
     print(f"Created {len(chunks)} chunks")
-    
+
     # Generate embeddings in batches
     print("Generating embeddings...")
     batch_size = 20  # Avoid token limits
     all_embeddings = []
-    
+
     for i in range(0, len(chunks), batch_size):
         batch_chunks = chunks[i:i + batch_size]
         batch_texts = [chunk["text"] for chunk in batch_chunks]
-        
+
         print(f"Processing batch {i // batch_size + 1}/{(len(chunks) + batch_size - 1) // batch_size}")
         batch_embeddings = generate_embeddings(batch_texts)
         all_embeddings.extend(batch_embeddings)
-    
+
     # Store in Firestore
     print("Storing in Firestore...")
     store_in_firestore(collection_name, document_name, chunks, all_embeddings)
-    
+
     print(f" Successfully processed {document_name}")
 
 if __name__ == "__main__":
@@ -384,7 +391,7 @@ if __name__ == "__main__":
     documents = [
         {
             "gcs_path": "frameworks/iso27001.pdf",
-            "collection": "frameworks", 
+            "collection": "frameworks",
             "name": "iso27001"
         },
         {
@@ -393,7 +400,7 @@ if __name__ == "__main__":
             "name": "nist"
         }
     ]
-    
+
     for doc in documents:
         try:
             process_document(doc["gcs_path"], doc["collection"], doc["name"])
@@ -439,11 +446,13 @@ GENERATION_CONFIG = {
 ### Embedding Best Practices
 
 1. **Chunking Strategy**:
+
    - 500 tokens per chunk (optimal for retrieval)
    - 50 token overlap between chunks
    - Preserve sentence boundaries
 
 2. **Batch Processing**:
+
    - Process 20 chunks per batch
    - Avoid API rate limits
    - Handle failures gracefully
@@ -507,22 +516,22 @@ service cloud.firestore {
     match /frameworks/{frameworkId} {
       allow read: if request.auth != null;
       allow write: if false; // Only admin/functions can write
-      
+
       match /chunks/{chunkId} {
         allow read: if request.auth != null;
         allow write: if false;
       }
     }
-    
+
     // Users can only access their own policies
     match /policies/{policyId} {
-      allow read, write: if request.auth != null 
+      allow read, write: if request.auth != null
         && request.auth.uid == resource.data.userId;
     }
-    
+
     // Users can only access their own reports
     match /reports/{reportId} {
-      allow read: if request.auth != null 
+      allow read: if request.auth != null
         && request.auth.uid == resource.data.userId;
       allow write: if false; // Only functions can write
     }
@@ -538,50 +547,51 @@ service cloud.firestore {
 
 ```typescript
 // Firebase Function - Simplified RAG
-export const analyzeDocument = onRequest({
-  region: "us-central1",
-  cors: true,
-  timeoutSeconds: 540,
-  memory: "1GiB",
-}, async (req, res) => {
-  try {
-    // 1. Extract document text
-    const policyText = await extractPolicyText(policyId);
-    
-    // 2. Load framework data from Firestore
-    const frameworkData = await loadFrameworkData(frameworks);
-    
-    // 3. Generate analysis with Gemini
-    const analysis = await generateAnalysis(policyText, frameworkData);
-    
-    res.json({ success: true, analysis });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
+export const analyzeDocument = onRequest(
+  {
+    region: 'us-central1',
+    cors: true,
+    timeoutSeconds: 540,
+    memory: '1GiB',
+  },
+  async (req, res) => {
+    try {
+      // 1. Extract document text
+      const policyText = await extractPolicyText(policyId)
 
-async function loadFrameworkData(frameworks: string[]): Promise<string> {
-  let content = "";
-  
-  for (const framework of frameworks) {
-    const frameworkDoc = await db.collection("frameworks")
-      .doc(framework).get();
-    
-    if (frameworkDoc.exists) {
-      content += `\n## ${framework.toUpperCase()}\n`;
-      
-      // Load chunks
-      const chunks = await frameworkDoc.ref
-        .collection("chunks").get();
-      
-      chunks.docs.forEach(doc => {
-        const data = doc.data();
-        content += `\n**Page ${data.page}**: ${data.text}\n`;
-      });
+      // 2. Load framework data from Firestore
+      const frameworkData = await loadFrameworkData(frameworks)
+
+      // 3. Generate analysis with Gemini
+      const analysis = await generateAnalysis(policyText, frameworkData)
+
+      res.json({ success: true, analysis })
+    } catch (error) {
+      res.status(500).json({ error: error.message })
     }
   }
-  
-  return content;
+)
+
+async function loadFrameworkData(frameworks: string[]): Promise<string> {
+  let content = ''
+
+  for (const framework of frameworks) {
+    const frameworkDoc = await db.collection('frameworks').doc(framework).get()
+
+    if (frameworkDoc.exists) {
+      content += `\n## ${framework.toUpperCase()}\n`
+
+      // Load chunks
+      const chunks = await frameworkDoc.ref.collection('chunks').get()
+
+      chunks.docs.forEach(doc => {
+        const data = doc.data()
+        content += `\n**Page ${data.page}**: ${data.text}\n`
+      })
+    }
+  }
+
+  return content
 }
 ```
 
@@ -589,48 +599,41 @@ async function loadFrameworkData(frameworks: string[]): Promise<string> {
 
 ```typescript
 // Advanced RAG with similarity search
-async function retrieveRelevantChunks(
-  query: string, 
-  frameworks: string[], 
-  topK: number = 10
-) {
+async function retrieveRelevantChunks(query: string, frameworks: string[], topK: number = 10) {
   // Generate query embedding
-  const queryEmbedding = await generateQueryEmbedding(query);
-  
-  const relevantChunks = [];
-  
+  const queryEmbedding = await generateQueryEmbedding(query)
+
+  const relevantChunks = []
+
   for (const framework of frameworks) {
-    const chunks = await db.collection("frameworks")
-      .doc(framework)
-      .collection("chunks")
-      .get();
-    
+    const chunks = await db.collection('frameworks').doc(framework).collection('chunks').get()
+
     // Calculate similarities
     const similarities = chunks.docs.map(doc => {
-      const data = doc.data();
-      const similarity = cosineSimilarity(queryEmbedding, data.embedding);
-      
+      const data = doc.data()
+      const similarity = cosineSimilarity(queryEmbedding, data.embedding)
+
       return {
         text: data.text,
         page: data.page,
         framework,
-        similarity
-      };
-    });
-    
+        similarity,
+      }
+    })
+
     // Get top K most similar
-    similarities.sort((a, b) => b.similarity - a.similarity);
-    relevantChunks.push(...similarities.slice(0, topK));
+    similarities.sort((a, b) => b.similarity - a.similarity)
+    relevantChunks.push(...similarities.slice(0, topK))
   }
-  
-  return relevantChunks.sort((a, b) => b.similarity - a.similarity);
+
+  return relevantChunks.sort((a, b) => b.similarity - a.similarity)
 }
 
 function cosineSimilarity(a: number[], b: number[]): number {
-  const dotProduct = a.reduce((sum, val, i) => sum + val * b[i], 0);
-  const magnitudeA = Math.sqrt(a.reduce((sum, val) => sum + val * val, 0));
-  const magnitudeB = Math.sqrt(b.reduce((sum, val) => sum + val * val, 0));
-  return dotProduct / (magnitudeA * magnitudeB);
+  const dotProduct = a.reduce((sum, val, i) => sum + val * b[i], 0)
+  const magnitudeA = Math.sqrt(a.reduce((sum, val) => sum + val * val, 0))
+  const magnitudeB = Math.sqrt(b.reduce((sum, val) => sum + val * val, 0))
+  return dotProduct / (magnitudeA * magnitudeB)
 }
 ```
 
@@ -642,16 +645,16 @@ function cosineSimilarity(a: number[], b: number[]): number {
 
 ```typescript
 // functions/src/index.ts
-import { setGlobalOptions } from "firebase-functions/v2";
+import { setGlobalOptions } from 'firebase-functions/v2'
 
 setGlobalOptions({
   maxInstances: 10,
-  region: "us-central1",
-});
+  region: 'us-central1',
+})
 
-export { analyzeDocument } from "./analyze";
-export { uploadDocument } from "./upload";
-export { getReports } from "./reports";
+export { analyzeDocument } from './analyze'
+export { uploadDocument } from './upload'
+export { getReports } from './reports'
 ```
 
 ### Environment Configuration
@@ -659,24 +662,24 @@ export { getReports } from "./reports";
 ```typescript
 // functions/src/config.ts
 export const CONFIG = {
-  PROJECT_ID: process.env.GCLOUD_PROJECT || "your-project-id",
-  REGION: "us-central1",
-  VERTEX_AI_LOCATION: "us-central1",
-  
+  PROJECT_ID: process.env.GCLOUD_PROJECT || 'your-project-id',
+  REGION: 'us-central1',
+  VERTEX_AI_LOCATION: 'us-central1',
+
   // Models
-  EMBEDDING_MODEL: "text-embedding-004",
-  GENERATION_MODEL: "gemini-2.5-flash",
-  
+  EMBEDDING_MODEL: 'text-embedding-004',
+  GENERATION_MODEL: 'gemini-2.5-flash',
+
   // Storage
   GCS_BUCKET: `${process.env.GCLOUD_PROJECT}.firebasestorage.app`,
-  
+
   // Collections
   COLLECTIONS: {
-    FRAMEWORKS: "frameworks",
-    POLICIES: "policies", 
-    REPORTS: "reports"
-  }
-};
+    FRAMEWORKS: 'frameworks',
+    POLICIES: 'policies',
+    REPORTS: 'reports',
+  },
+}
 ```
 
 ---
@@ -710,7 +713,7 @@ Complete document processing pipeline:
 
 ```python
 # embeddings.py - Embedding utilities
-# chunking.py - Text chunking strategies  
+# chunking.py - Text chunking strategies
 # firestore_utils.py - Database helpers
 # gcs_utils.py - Storage utilities
 ```
@@ -766,16 +769,19 @@ firebase deploy --only hosting
 ## Cost Optimization
 
 ### Embedding Costs
+
 - **text-embedding-004**: $0.00025 per 1K tokens
 - **Batch processing**: Reduces API calls
 - **768 dimensions**: 50% cost reduction vs 1536
 
 ### Storage Costs
+
 - **Firestore**: $0.18 per 100K reads
 - **GCS**: $0.020 per GB/month
 - **Functions**: $0.40 per million invocations
 
 ### Optimization Strategies
+
 1. **Chunk size**: 500 tokens (optimal retrieval vs cost)
 2. **Batch processing**: 20 chunks per API call
 3. **Caching**: Store frequently accessed data
@@ -788,24 +794,27 @@ firebase deploy --only hosting
 ### Common Issues
 
 1. **Authentication Errors**
+
    ```bash
    gcloud auth application-default login
    export GOOGLE_APPLICATION_CREDENTIALS="path/to/key.json"
    ```
 
 2. **API Quota Exceeded**
+
    ```bash
    # Check quotas
    gcloud compute project-info describe --project=PROJECT_ID
-   
+
    # Request quota increase in GCP Console
    ```
 
 3. **Firestore Permission Denied**
+
    ```bash
    # Check IAM roles
    gcloud projects get-iam-policy PROJECT_ID
-   
+
    # Add required roles
    gcloud projects add-iam-policy-binding PROJECT_ID \
      --member="serviceAccount:SERVICE_ACCOUNT" \
@@ -840,21 +849,24 @@ gcloud billing budgets list
 ## 📚 Additional Resources
 
 ### Documentation
+
 - [Vertex AI Embeddings](https://cloud.google.com/vertex-ai/docs/generative-ai/embeddings/get-text-embeddings)
 - [Firestore Documentation](https://firebase.google.com/docs/firestore)
 - [Firebase Functions](https://firebase.google.com/docs/functions)
 
 ### Best Practices
+
 - [RAG System Design](https://cloud.google.com/blog/topics/developers-practitioners/rag-applications-vertex-ai)
 - [Vector Database Optimization](https://cloud.google.com/blog/topics/developers-practitioners/optimize-vector-similarity-search)
 
 ### Community
+
 - [Firebase Discord](https://discord.gg/firebase)
 - [Google Cloud Community](https://cloud.google.com/community)
 
 ---
 
-##  Quick Start Checklist
+## Quick Start Checklist
 
 - [ ] Create Google Cloud Project
 - [ ] Enable required APIs
@@ -869,5 +881,4 @@ gcloud billing budgets list
 
 ---
 
-
-*This template is designed to be generic and adaptable to different RAG projects. Customize the configuration, models, and processing logic based on your specific requirements.*
+_This template is designed to be generic and adaptable to different RAG projects. Customize the configuration, models, and processing logic based on your specific requirements._

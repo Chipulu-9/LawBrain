@@ -11,6 +11,7 @@
 **Target Users**: Citizens, students, lawyers, researchers seeking quick, accurate Zambian legal information.
 
 ### Key Features
+
 - Conversational AI chat with cited legal sources
 - Firestore Native Vector Search for semantic document retrieval
 - Session history persisted per authenticated user
@@ -21,39 +22,39 @@
 
 ## 2. Tech Stack (Golden Path)
 
-| Layer | Technology | Version |
-|---|---|---|
-| Package Manager | pnpm workspaces | 8.15.6+ |
-| Monorepo Orchestration | Turborepo | ^2.7.5 |
-| Runtime | Node.js | >=20 |
-| Language | TypeScript (strict) | 5.5.4 |
-| Frontend Framework | React | ^18.3.1 |
-| Build Tool | Vite | ^5.1.4 |
-| UI Kit | shadcn/ui (Radix + Tailwind) | latest |
-| Styling | Tailwind CSS | ^3.4.15 |
-| Icons | Lucide React | ^0.468.0 |
-| Routing | React Router DOM | ^6.28.0 |
-| State / Server Cache | TanStack Query | ^5.62.0 |
-| Forms | React Hook Form + Zod | ^7.x / ^3.x |
-| API Layer | tRPC | ^11.0.0-rc.660 |
-| Notifications | Sonner | ^1.7.1 |
-| Markdown Rendering | react-markdown + remark-gfm | ^9.x / ^4.x |
-| Date Formatting | date-fns | ^3.6.0 |
-| Auth + DB + Storage | Firebase SDK | ^10.14.0 |
-| Backend Runtime | Firebase Cloud Functions v2 | ^6.x |
-| Backend Admin | Firebase Admin SDK | ^12.x |
-| AI / Embeddings | Google Generative AI SDK | ^0.21.0 |
-| PDF Extraction | pdf-parse | ^1.1.1 |
-| Testing (Unit) | Vitest + Testing Library | ^2.1.8 |
-| E2E Testing | Playwright | ^1.x |
-| Linting | ESLint + typescript-eslint | ^8.57.0 |
-| Formatting | Prettier | ^3.2.5 |
-| Git Hooks | Husky + lint-staged | ^9.x |
-| Versioning | Changesets | ^2.27.1 |
-| Dependency Sync | Syncpack | ^13.0.0 |
-| CI/CD | GitHub Actions + WIF | — |
-| Hosting | Firebase Hosting | — |
-| Vector Search | Firestore Native Vector Search | — |
+| Layer                  | Technology                     | Version        |
+| ---------------------- | ------------------------------ | -------------- |
+| Package Manager        | pnpm workspaces                | 8.15.6+        |
+| Monorepo Orchestration | Turborepo                      | ^2.7.5         |
+| Runtime                | Node.js                        | >=20           |
+| Language               | TypeScript (strict)            | 5.5.4          |
+| Frontend Framework     | React                          | ^18.3.1        |
+| Build Tool             | Vite                           | ^5.1.4         |
+| UI Kit                 | shadcn/ui (Radix + Tailwind)   | latest         |
+| Styling                | Tailwind CSS                   | ^3.4.15        |
+| Icons                  | Lucide React                   | ^0.468.0       |
+| Routing                | React Router DOM               | ^6.28.0        |
+| State / Server Cache   | TanStack Query                 | ^5.62.0        |
+| Forms                  | React Hook Form + Zod          | ^7.x / ^3.x    |
+| API Layer              | tRPC                           | ^11.0.0-rc.660 |
+| Notifications          | Sonner                         | ^1.7.1         |
+| Markdown Rendering     | react-markdown + remark-gfm    | ^9.x / ^4.x    |
+| Date Formatting        | date-fns                       | ^3.6.0         |
+| Auth + DB + Storage    | Firebase SDK                   | ^10.14.0       |
+| Backend Runtime        | Firebase Cloud Functions v2    | ^6.x           |
+| Backend Admin          | Firebase Admin SDK             | ^12.x          |
+| AI / Embeddings        | Google Generative AI SDK       | ^0.21.0        |
+| PDF Extraction         | pdf-parse                      | ^1.1.1         |
+| Testing (Unit)         | Vitest + Testing Library       | ^2.1.8         |
+| E2E Testing            | Playwright                     | ^1.x           |
+| Linting                | ESLint + typescript-eslint     | ^8.57.0        |
+| Formatting             | Prettier                       | ^3.2.5         |
+| Git Hooks              | Husky + lint-staged            | ^9.x           |
+| Versioning             | Changesets                     | ^2.27.1        |
+| Dependency Sync        | Syncpack                       | ^13.0.0        |
+| CI/CD                  | GitHub Actions + WIF           | —              |
+| Hosting                | Firebase Hosting               | —              |
+| Vector Search          | Firestore Native Vector Search | —              |
 
 ---
 
@@ -233,12 +234,12 @@ lawbrain/
 
 New schemas to add under `packages/shared/src/schemas/`:
 
-| File | Purpose |
-|---|---|
-| `user.ts` | User profile (already exists) |
-| `chat.ts` | ChatSession, ChatMessage, MessageRole |
-| `document.ts` | DocumentChunk, DocumentMetadata |
-| `rag.ts` | QueryInput, RAGResponse, SourceReference |
+| File          | Purpose                                  |
+| ------------- | ---------------------------------------- |
+| `user.ts`     | User profile (already exists)            |
+| `chat.ts`     | ChatSession, ChatMessage, MessageRole    |
+| `document.ts` | DocumentChunk, DocumentMetadata          |
+| `rag.ts`      | QueryInput, RAGResponse, SourceReference |
 
 ---
 
@@ -290,6 +291,7 @@ Firestore
 ## 6. Firestore Data Model
 
 ### `/users/{uid}`
+
 ```ts
 {
   uid: string
@@ -301,11 +303,12 @@ Firestore
 ```
 
 ### `/chatSessions/{sessionId}`
+
 ```ts
 {
   id: string
   userId: string
-  title: string           // auto-generated from first message
+  title: string // auto-generated from first message
   createdAt: Timestamp
   updatedAt: Timestamp
   messageCount: number
@@ -313,6 +316,7 @@ Firestore
 ```
 
 ### `/chatSessions/{sessionId}/messages/{messageId}`
+
 ```ts
 {
   id: string
@@ -332,6 +336,7 @@ type SourceReference = {
 ```
 
 ### `/documentChunks/{chunkId}`
+
 ```ts
 {
   id: string
@@ -339,14 +344,15 @@ type SourceReference = {
   documentType: 'constitution' | 'act' | 'regulation'
   pageNumber: number | null
   section: string | null
-  content: string             // raw text of the chunk
-  embedding: VectorValue      // 768-dim (text-embedding-004)
+  content: string // raw text of the chunk
+  embedding: VectorValue // 768-dim (text-embedding-004)
   charCount: number
   createdAt: Timestamp
 }
 ```
 
 **Vector index** (create via Firebase console or CLI):
+
 ```
 Collection: documentChunks
 Field: embedding
@@ -359,24 +365,27 @@ Distance: COSINE
 ## 7. tRPC API Design
 
 ### `chat.router`
+
 ```ts
-chat.createSession()                    // → ChatSession
-chat.listSessions()                     // → ChatSession[]
-chat.getSession(sessionId)             // → ChatSession
-chat.deleteSession(sessionId)          // → void
+chat.createSession() // → ChatSession
+chat.listSessions() // → ChatSession[]
+chat.getSession(sessionId) // → ChatSession
+chat.deleteSession(sessionId) // → void
 chat.sendMessage({ sessionId, text }) // → AssistantMessage (streaming TBD)
-chat.listMessages(sessionId)           // → ChatMessage[]
+chat.listMessages(sessionId) // → ChatMessage[]
 ```
 
 ### `document.router`
+
 ```ts
-document.list()                         // → DocumentMeta[]
-document.getChunk(chunkId)             // → DocumentChunk
+document.list() // → DocumentMeta[]
+document.getChunk(chunkId) // → DocumentChunk
 ```
 
 ### `auth.router`
+
 ```ts
-auth.me()                               // → User (from Firebase token)
+auth.me() // → User (from Firebase token)
 ```
 
 ---
@@ -412,6 +421,7 @@ Step 5 — Return
 ```
 
 **Chunking strategy** (ingestion script):
+
 - Chunk size: ~500 tokens (~2000 characters)
 - Overlap: ~50 tokens (~200 characters)
 - Split on: paragraph breaks → sentence boundaries → hard limit
@@ -587,6 +597,7 @@ CORPUS_DIR=../../corpus
 ```
 
 **Responsive behaviour:**
+
 - `lg+` (≥1024px): All three columns visible
 - `md` (768–1023px): Sidebar collapses to icon rail; sources panel hidden, toggleable
 - `sm` (< 768px): Single column; sidebar in drawer (Sheet); sources in bottom sheet
@@ -721,14 +732,14 @@ Unchanged from the existing setup (see `docs/ci-cd/`). Key addition:
 
 ## 12. Open Questions / Risks
 
-| # | Question | Owner | Status |
-|---|---|---|---|
-| 1 | Streaming responses (SSE vs full response)? | Backend | Open |
-| 2 | Firestore Vector Search billing at scale? | Infra | Open |
-| 3 | Gemini Flash vs Pro — quality vs cost tradeoff? | AI | Open |
-| 4 | Rate limiting per user on chat.sendMessage? | Backend | Open |
-| 5 | WCAG 2.1 AA audit before launch? | Frontend | Open |
-| 6 | Admin role for adding new corpus documents? | Product | Open |
+| #   | Question                                        | Owner    | Status |
+| --- | ----------------------------------------------- | -------- | ------ |
+| 1   | Streaming responses (SSE vs full response)?     | Backend  | Open   |
+| 2   | Firestore Vector Search billing at scale?       | Infra    | Open   |
+| 3   | Gemini Flash vs Pro — quality vs cost tradeoff? | AI       | Open   |
+| 4   | Rate limiting per user on chat.sendMessage?     | Backend  | Open   |
+| 5   | WCAG 2.1 AA audit before launch?                | Frontend | Open   |
+| 6   | Admin role for adding new corpus documents?     | Product  | Open   |
 
 ---
 
@@ -758,4 +769,4 @@ pnpm dev
 
 ---
 
-*Last updated: 2026-02-18 — LawBrain v0.1.0 design draft*
+_Last updated: 2026-02-18 — LawBrain v0.1.0 design draft_

@@ -1,0 +1,5 @@
+{
+  "permissions": {
+    "allow": ["Bash(npx eslint --fix src/index.ts)", "Bash(npm install --save-dev eslint@^8.57.0)"]
+  }
+}
