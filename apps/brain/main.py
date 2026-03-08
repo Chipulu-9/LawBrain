@@ -85,6 +85,38 @@ def _extract_citations(response: types.GenerateContentResponse) -> list[dict]:
 
 
 # ---------------------------------------------------------------------------
+# CORS Configuration
+# ---------------------------------------------------------------------------
+
+ALLOWED_ORIGINS = [
+    "https://lawbrain-c4581.web.app",
+    "https://lawbrain-c4581.firebaseapp.com",
+    "http://localhost:5173",
+    "http://localhost:3000",
+]
+
+
+def _cors_headers(request) -> dict:
+    origin = request.headers.get("Origin", "")
+    if origin in ALLOWED_ORIGINS or origin.startswith("http://localhost"):
+        allowed_origin = origin
+    else:
+        allowed_origin = ALLOWED_ORIGINS[0]
+    return {
+        "Access-Control-Allow-Origin": allowed_origin,
+        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type, Authorization",
+        "Access-Control-Max-Age": "3600",
+    }
+
+
+def _handle_preflight(request):
+    if request.method == "OPTIONS":
+        return ("", 204, _cors_headers(request))
+    return None
+
+
+# ---------------------------------------------------------------------------
 # Function 1 — ingest_bucket
 # ---------------------------------------------------------------------------
 
@@ -103,6 +135,12 @@ def ingest_bucket(request):
       202  { "status": "submitted", "operation_name": "...", "done": false }
       500  { "error": "..." }
     """
+    preflight = _handle_preflight(request)
+    if preflight:
+        return preflight
+
+    headers = {"Content-Type": "application/json", **_cors_headers(request)}
+
     try:
         body = request.get_json(silent=True) or {}
         gcs_files: list[str] = body.get("gcs_files", DEFAULT_GCS_FILES)
@@ -125,30 +163,15 @@ def ingest_bucket(request):
             "corpus": CORPUS_NAME,
         }
 
-        return (
-            json.dumps(payload),
-            202,
-            {"Content-Type": "application/json"},
-        )
+        return (json.dumps(payload), 202, headers)
 
     except Exception as exc:  # noqa: BLE001
-        return (
-            json.dumps({"error": str(exc)}),
-            500,
-            {"Content-Type": "application/json"},
-        )
+        return (json.dumps({"error": str(exc)}), 500, headers)
 
 
 # ---------------------------------------------------------------------------
 # Function 2 — ask_rag
 # ---------------------------------------------------------------------------
-
-
-_CORS_HEADERS = {
-    "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Methods": "POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type",
-}
 
 
 @functions_framework.http
@@ -164,8 +187,11 @@ def ask_rag(request):
       400  { "error": "Missing required field: query" }
       500  { "error": "..." }
     """
-    if request.method == "OPTIONS":
-        return ("", 204, _CORS_HEADERS)
+    preflight = _handle_preflight(request)
+    if preflight:
+        return preflight
+
+    headers = {"Content-Type": "application/json", **_cors_headers(request)}
 
     try:
         body = request.get_json(silent=True) or {}
@@ -173,11 +199,7 @@ def ask_rag(request):
         response_language: str = body.get("response_language", "en")
 
         if not query:
-            return (
-                json.dumps({"error": "Missing required field: query"}),
-                400,
-                {"Content-Type": "application/json", **_CORS_HEADERS},
-            )
+            return (json.dumps({"error": "Missing required field: query"}), 400, headers)
 
         client = _genai_client()
 
@@ -213,15 +235,7 @@ def ask_rag(request):
             "citations": _extract_citations(response),
         }
 
-        return (
-            json.dumps(payload),
-            200,
-            {"Content-Type": "application/json", **_CORS_HEADERS},
-        )
+        return (json.dumps(payload), 200, headers)
 
     except Exception as exc:  # noqa: BLE001
-        return (
-            json.dumps({"error": str(exc)}),
-            500,
-            {"Content-Type": "application/json", **_CORS_HEADERS},
-        )
+        return (json.dumps({"error": str(exc)}), 500, headers)
